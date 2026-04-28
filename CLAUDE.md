@@ -6,6 +6,70 @@
 
 调用 `$hardware-solution` 技能，输入产品需求，获得可评审、可落地的硬件方案。
 
+## 安装 / 更新 / 删除
+
+以下命令默认在本仓库根目录 `/home/xiaozhi/work/NextBoard` 执行。安装或更新后，需要重启 Codex 或 Claude Code 会话，让客户端重新加载 skill 列表。
+
+### Codex
+
+安装或更新 skill：
+
+```bash
+mkdir -p "$HOME/.codex/skills"
+rm -rf "$HOME/.codex/skills/hardware-solution"
+cp -r skills/hardware-solution "$HOME/.codex/skills/"
+```
+
+删除 skill：
+
+```bash
+rm -rf "$HOME/.codex/skills/hardware-solution"
+```
+
+验证：
+
+```bash
+python3 /home/xiaozhi/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$HOME/.codex/skills/hardware-solution"
+```
+
+### Claude Code
+
+安装或更新 skill：
+
+```bash
+mkdir -p "$HOME/.claude/skills"
+rm -rf "$HOME/.claude/skills/hardware-solution"
+cp -r skills/hardware-solution "$HOME/.claude/skills/"
+```
+
+如果需要同时使用独立评审 agent，可安装 agent：
+
+```bash
+mkdir -p "$HOME/.claude/agents"
+cp agents/hardware-reviewer.md "$HOME/.claude/agents/"
+```
+
+删除 skill 和配套 agent：
+
+```bash
+rm -rf "$HOME/.claude/skills/hardware-solution"
+rm -f "$HOME/.claude/agents/hardware-reviewer.md"
+```
+
+### 本仓库插件开发测试
+
+检查 Codex skill 结构：
+
+```bash
+python3 /home/xiaozhi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/hardware-solution
+```
+
+检查 Claude Code session hook 输出：
+
+```bash
+CLAUDE_PLUGIN_ROOT="$PWD" hooks/session-start | python3 -m json.tool
+```
+
 ## 平台支持
 
 - Claude Code：通过 `.claude-plugin/`、`skills/`、`agents/`、`hooks/` 使用；会话启动 hook 只注入短提醒，不注入完整 skill 内容。
