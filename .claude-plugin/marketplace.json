@@ -1,0 +1,18 @@
+{
+  "name": "nextboard-hardware-solution-dev",
+  "description": "Development marketplace for NextBoard hardware solution workflows",
+  "owner": {
+    "name": "NextBoard"
+  },
+  "plugins": [
+    {
+      "name": "nextboard-hardware-solution",
+      "description": "Hardware solution design skills and workflows for embedded and hardware engineers.",
+      "version": "0.2.0",
+      "source": "./",
+      "author": {
+        "name": "NextBoard"
+      }
+    }
+  ]
+}

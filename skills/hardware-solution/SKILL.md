@@ -28,6 +28,7 @@ description: 面向嵌入式产品硬件方案设计的工作流。Use when Code
 3. 需要交付正式方案时，使用 [references/output-template.md](references/output-template.md) 的结构输出。
 4. 需要评审原理图、PCB、BOM 或量产风险时，读取 [references/review-checklists.md](references/review-checklists.md)。
 5. 涉及关键芯片选型、供应链、认证或替代料时，读取 [references/sourcing-and-risk.md](references/sourcing-and-risk.md)。
+6. 每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 确认门控通过。
 
 ## 输出原则
 
@@ -36,6 +37,36 @@ description: 面向嵌入式产品硬件方案设计的工作流。Use when Code
 - 面向落地：输出接口表、电源树、关键器件表、PCB 约束和验证计划，而不是泛泛描述。
 - 标注风险：把高风险项、待确认项、验证动作分开列出。
 - 需要最新器件价格、库存、生命周期、认证规则或厂商资料时，必须联网查证；只用厂商官网、官方数据手册、分销商页面或认证机构资料作为依据。
+
+## 反模式（不要做）
+
+- 不要凭记忆给出器件型号、参数、价格或库存信息。必须联网查证或明确标注为假设。
+- 不要跳过需求冻结直接选型。缺失的约束会导致后期返工。
+- 不要只列器件清单而不解释架构取舍。"用了什么"不等于"为什么这样设计"。
+- 不要输出泛泛描述（"选择合适的 MCU""使用低功耗方案"）。必须给出具体型号、参数和理由。
+- 不要在用户没有确认架构方向时就深入选型细节。
+- 不要忽略风险评估。风险清单为空意味着评估不充分，不是没有风险。
+- 不要假设器件在产、有货、有认证。这些必须查证。
+
+## 结构化选项
+
+遇到需要用户决策的分歧点时，优先给出 2-4 个具体选项，避免把约束澄清变成开放式闲聊。当关键约束未知且无法合理枚举时，只问一个必要的开放问题。
+
+1. 方案名称
+2. 核心差异（一句话）
+3. 适用条件
+4. 主要风险
+
+示例格式：
+- 方案 A：STM32G4 + 分立电源 — 成本最优，适合年产量 >10K，需要更多 PCB 面积
+- 方案 B：ESP32-S3 + 集成 PMIC — 开发最快，适合快速验证，Wi-Fi/BLE 内置但功耗较高
+- 方案 C：NXP i.MX RT + 模组 — 算力最强，适合边缘计算场景，BOM 成本高
+
+## 验证门控
+
+每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 中对应的门控检查项。未通过的项不能进入下一阶段。
+
+完成方案输出后进行独立评审：如果当前平台支持 agents，使用 `hardware-reviewer` agent；如果不支持，则按 [../../agents/hardware-reviewer.md](../../agents/hardware-reviewer.md) 的五个维度在当前会话内自检。评审发现的 CONCERN 和 FAIL 项必须处理或标注为待确认后才能交付。
 
 ## 交接关系
 

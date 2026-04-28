@@ -1,6 +1,6 @@
 {
   "name": "nextboard-hardware-solution",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hardware solution design skills and workflows for embedded and hardware engineers.",
   "author": {
     "name": "NextBoard"
@@ -13,9 +13,13 @@
     "architecture",
     "bom",
     "pcb",
-    "workflow"
+    "workflow",
+    "design-review",
+    "component-selection"
   ],
   "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/",
   "interface": {
     "displayName": "NextBoard Hardware Solution",
     "shortDescription": "Embedded hardware design workflows",

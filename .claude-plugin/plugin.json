@@ -1,0 +1,20 @@
+{
+  "name": "nextboard-hardware-solution",
+  "description": "Hardware solution design skills and workflows for embedded and hardware engineers.",
+  "version": "0.2.0",
+  "author": {
+    "name": "NextBoard"
+  },
+  "license": "MIT",
+  "keywords": [
+    "hardware",
+    "embedded",
+    "schematic",
+    "architecture",
+    "bom",
+    "pcb",
+    "workflow",
+    "design-review",
+    "component-selection"
+  ]
+}
