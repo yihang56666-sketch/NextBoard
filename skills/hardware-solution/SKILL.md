@@ -24,11 +24,12 @@ description: 面向嵌入式产品硬件方案设计的工作流。Use when Code
 ## 流程
 
 1. 读取 [references/design-workflow.md](references/design-workflow.md)，按阶段推进，不要跳过需求冻结和风险澄清。
-2. 如果是从零设计，先输出 2-3 个候选架构并比较取舍；如果是评审已有方案，直接进入风险审查和改进建议。
-3. 需要交付正式方案时，使用 [references/output-template.md](references/output-template.md) 的结构输出。
-4. 需要评审原理图、PCB、BOM 或量产风险时，读取 [references/review-checklists.md](references/review-checklists.md)。
-5. 涉及关键芯片选型、供应链、认证或替代料时，读取 [references/sourcing-and-risk.md](references/sourcing-and-risk.md)。
-6. 每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 确认门控通过。
+2. 先给用户一个“需求澄清选择题”：用 2-4 个具体选项确认优先级、成本/功耗/周期取向、国内/海外/混合供应链偏好。用户选择或授权基于假设推进后，才能进入深入选型。
+3. 如果是从零设计，先输出 3 类候选架构并比较取舍：国产芯片/国产供应链优先、海外主流生态优先、混合折中方案。若某类不适用，必须说明原因；如果是评审已有方案，直接进入风险审查和改进建议。
+4. 需要交付正式方案时，使用 [references/output-template.md](references/output-template.md) 的结构输出。
+5. 需要评审原理图、PCB、BOM 或量产风险时，读取 [references/review-checklists.md](references/review-checklists.md)。
+6. 涉及关键芯片选型、供应链、认证或替代料时，读取 [references/sourcing-and-risk.md](references/sourcing-and-risk.md)；涉及国产芯片、国内元器件渠道或国产替代时，同时读取 [references/domestic-sources.md](references/domestic-sources.md)。
+7. 每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 确认门控通过。
 
 ## 输出原则
 
@@ -58,9 +59,9 @@ description: 面向嵌入式产品硬件方案设计的工作流。Use when Code
 4. 主要风险
 
 示例格式：
-- 方案 A：STM32G4 + 分立电源 — 成本最优，适合年产量 >10K，需要更多 PCB 面积
-- 方案 B：ESP32-S3 + 集成 PMIC — 开发最快，适合快速验证，Wi-Fi/BLE 内置但功耗较高
-- 方案 C：NXP i.MX RT + 模组 — 算力最强，适合边缘计算场景，BOM 成本高
+- 方案 A：国产 MCU + 国产 RS485/电源器件 — 供应链自主性更好，适合国产替代或成本敏感项目，需验证生态和长期供货
+- 方案 B：STM32/MSP430 等海外主流 MCU + 成熟模拟器件 — 生态成熟、开发风险低，适合交付周期紧的项目，需确认供货和价格
+- 方案 C：国产主控 + 海外关键模拟/传感器 — 成本、生态和供应风险折中，适合量产前快速收敛，BOM 管理复杂度更高
 
 ## 验证门控
 

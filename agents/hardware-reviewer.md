@@ -10,11 +10,13 @@ When reviewing a hardware design proposal, evaluate these five areas:
 
 - Does the proposal cover all functional domains: power, MCU/SoC, communication, sensing, HMI, protection, and production test?
 - Are requirements and assumptions explicitly stated with known/assumed/TBD status?
+- Did the proposal ask the user to choose between structured options before deep component selection?
 - Is there a system block diagram showing module relationships?
 
 ### 2. Risk Identification
 
 - Are supply chain risks identified for critical components (lifecycle, lead time, single-source)?
+- Does the proposal compare domestic, overseas, and mixed sourcing options, or explain why a category is not applicable?
 - Are certification risks called out (SRRC, CE, FCC, etc.)?
 - Are EMC, thermal, and ESD risks addressed with specific mitigation plans?
 - Are high-risk items separated from medium/low with clear verification actions?
