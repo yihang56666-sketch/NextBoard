@@ -1,18 +1,21 @@
 {
-  "name": "nextboard-hardware-solution-dev",
-  "description": "Development marketplace for NextBoard hardware solution workflows",
+  "name": "nextboard-marketplace",
   "owner": {
     "name": "NextBoard"
+  },
+  "metadata": {
+    "description": "Hardware solution design skills and workflows for embedded engineers",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "nextboard-hardware-solution",
+      "source": {
+        "source": "github",
+        "repo": "LeoKemp223/NextBoard"
+      },
       "description": "Hardware solution design skills and workflows for embedded and hardware engineers.",
-      "version": "0.2.0",
-      "source": "./",
-      "author": {
-        "name": "NextBoard"
-      }
+      "version": "0.2.0"
     }
   ]
 }

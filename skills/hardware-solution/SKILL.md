@@ -1,6 +1,6 @@
 ---
 name: hardware-solution
-description: 面向嵌入式产品硬件方案设计的工作流。Use when Codex needs to help embedded engineers or hardware engineers turn product requirements into hardware architecture, MCU/SoC selection, power tree, interfaces, sensors, storage, RF/connectivity, schematic block diagrams, BOM risk notes, PCB/layout constraints, validation plans, or design-review checklists. 适用于“做硬件方案”“选型”“原理图前方案”“评审硬件设计”“输出硬件设计文档/方案书”等任务。
+description: "Use when the user needs embedded hardware architecture, MCU/SoC selection, power tree design, interface planning, sensor/actuator selection, RF/connectivity, BOM risk assessment, PCB/layout constraints, schematic-ready proposals, validation plans, or hardware design review."
 ---
 
 # Hardware Solution
@@ -48,6 +48,21 @@ description: 面向嵌入式产品硬件方案设计的工作流。Use when Code
 - 不要在用户没有确认架构方向时就深入选型细节。
 - 不要忽略风险评估。风险清单为空意味着评估不充分，不是没有风险。
 - 不要假设器件在产、有货、有认证。这些必须查证。
+
+## 常见合理化借口
+
+以下是执行过程中容易出现的"合理化"想法。如果你发现自己在这样想，停下来。
+
+| 想法 | 现实 |
+|------|------|
+| "这个芯片我很熟，不用查手册" | 参数必须来自 datasheet，记忆不可靠，型号/封装/温度范围经常记错 |
+| "风险清单先空着，后面补" | 风险清单不能为空，这是 Gate 5 的硬性门控 |
+| "只有一个方案可选，不需要对比" | 至少说明为什么排除了其他方向，单一方案也要有取舍说明 |
+| "用户没提功耗要求，跳过电源树" | 电源树是必选输出，缺失约束应标注为假设而不是跳过 |
+| "这个需求很明确，不用冻结直接选型" | 需求冻结是 Gate 1，跳过会导致后期返工 |
+| "先给个大概方案，细节后面再补" | 输出必须面向落地，泛泛描述不符合输出原则 |
+| "国产替代不适用这个场景" | 必须说明为什么不适用，不能默认跳过国产候选 |
+| "价格和库存我大概知道" | 价格、库存、生命周期必须联网查证，不能凭印象 |
 
 ## 结构化选项
 
