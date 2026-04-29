@@ -23,20 +23,27 @@ description: "Use when the user needs embedded hardware architecture, MCU/SoC se
 
 ## 流程
 
+0. **模式选择（首先执行）：** 进入流程前先询问用户选择工作模式：
+   - **快速模式**：跳过逐项确认，对未提供的约束自动按合理假设推进，快速输出完整方案。适合原型验证、技术预研、个人项目。仍输出假设清单供用户事后审阅。
+   - **专业模式**：严格执行需求冻结，所有"待确认"项逐一确认，每次只问 1 个问题。适合量产项目、团队协作、正式交付。
+
 1. 读取 [references/design-workflow.md](references/design-workflow.md)，按阶段推进，不要跳过需求冻结和风险澄清。
-2. 先给用户一个"需求澄清选择题"：用 2-4 个具体选项确认优先级、成本/功耗/周期取向、国内/海外/混合供应链偏好。**所有标记为"待确认"的约束项必须逐一向用户确认，不能默认跳过或自行假设。** 用户选择或授权基于假设推进后，才能进入深入选型。
+2. 先给用户一个"需求澄清选择题"：用 2-4 个具体选项确认优先级、成本/功耗/周期取向、国内/海外/混合供应链偏好。**专业模式下：所有标记为"待确认"的约束项必须逐一向用户确认，不能默认跳过或自行假设。每次只问 1 个问题，等用户回复后再问下一个，严禁一次性列出多个问题。每个问题必须提供具体选项 + 一个"自定义输入"选项，让用户可以填写自己的答案。** **快速模式下：列出需求表和假设清单，用户可一次性确认或修改，无需逐项问答。** 用户选择或授权基于假设推进后，才能进入深入选型。
 3. 如果是从零设计，先输出 3 类候选架构并比较取舍：国产芯片/国产供应链优先、海外主流生态优先、混合折中方案。若某类不适用，必须说明原因；如果是评审已有方案，直接进入风险审查和改进建议。
-4. 关键器件建议必须附带：采购链接（国内电商平台或分销商页面 URL，优先淘宝/立创商城/嘉立创 > 授权分销商 > 原厂官网）、datasheet 下载链接（优先 AllDatasheet > 立创商城 > 半导小芯 > 原厂官网）、封装文件下载链接（优先立创 EDA 封装库/华秋 DFM 封装库 > 嘉立创封装库 > SnapEDA/Ultra Librarian > 原厂）。无法提供时标注"需联网查证"。
-5. Gate 3 通过后，询问用户使用的 EDA 工具，然后批量下载已选器件的 datasheet（PDF）和对应格式的封装文件，保存至 `docs/hardware/datasheets/` 和 `docs/hardware/footprints/` 目录。下载失败的标注原因并提供手动下载链接。
+4. 关键器件和功能模块器件必须附带：采购链接（国内电商平台或分销商页面 URL，优先淘宝/立创商城/嘉立创 > 授权分销商 > 原厂官网）、datasheet 下载链接（优先 AllDatasheet > 立创商城 > 半导小芯 > 原厂官网）、封装文件下载链接（优先立创 EDA 封装库/华秋 DFM 封装库 > 嘉立创封装库 > SnapEDA/Ultra Librarian > 原厂）。无法提供时标注"需联网查证"。被动元件（电阻、电容、电感等通用规格件）不需要提供链接和资料下载。
+   - 关键 IC：MCU、PMIC、收发器、传感器、ADC/DAC 等核心芯片
+   - 功能模块器件：晶振、连接器、ESD/TVS 保护、存储芯片、负载开关、LDO 等
+5. Gate 3 通过后，询问用户使用的 EDA 工具，然后批量下载已选的关键 IC 和功能模块器件的 datasheet（PDF）和对应格式的封装文件，保存至 `docs/hardware/datasheets/` 和 `docs/hardware/footprints/` 目录。被动元件不下载（EDA 库中通常已有）。**下载前先读取 [references/download-sources.md](references/download-sources.md)，优先使用已验证的源；下载成功后将新记录追加到该文件；下载失败也记录到"已知失败源"避免重复尝试。** 必须严格按优先级顺序尝试下载源（AllDatasheet > 立创 > 半导小芯 > 原厂），禁止直接跳到原厂站点。遇到反爬、动态页面、非 PDF 响应时立即跳过该源尝试下一个，全部失败则标注"需手动下载"并附可用链接。禁止保存非 PDF 文件到 datasheets 目录。
 6. 需要交付正式方案时，使用 [references/output-template.md](references/output-template.md) 的结构输出。
 7. 需要评审原理图、PCB、BOM 或量产风险时，读取 [references/review-checklists.md](references/review-checklists.md)。
 8. 涉及关键芯片选型、供应链、认证或替代料时，读取 [references/sourcing-and-risk.md](references/sourcing-and-risk.md)；涉及国产芯片、国内元器件渠道或国产替代时，同时读取 [references/domestic-sources.md](references/domestic-sources.md)。
 9. 每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 确认门控通过。
-10. 评审通过后询问用户是否需要输出模块原理图。如果用户确认需要，先提供展示方式选项供用户选择（结构化连接表 / ASCII 框图 / KiCad 网表），然后按用户选择的方式和指定的模块范围输出。通过 Gate 6 后交付。
+10. 评审通过后询问用户是否需要输出模块原理图。如果用户确认需要，先提供展示方式选项供用户选择（结构化连接表 / ASCII 框图 / D2 图表 / KiCad 原理图文件 .kicad_sch / 立创 EDA JSON），然后按用户选择的方式和指定的模块范围输出。通过 Gate 6 后交付。
+11. 所有阶段完成后，将 `docs/hardware/` 目录下的全部 markdown 文件合并输出为 PDF 报告。运行 `python3 scripts/md_to_pdf.py --merge docs/hardware/ docs/hardware/hardware-solution.pdf --title "项目名称-硬件方案报告"`。
 
 ## 文件输出规则
 
-有表格产出的阶段必须输出为 markdown 文件，保存在用户项目的 `docs/hardware/` 目录下（目录不存在时创建）。文件命名规则：
+有表格产出的阶段必须**先在会话窗口完整打印内容**，然后同时写入 markdown 文件，保存在用户项目的 `docs/hardware/` 目录下（目录不存在时创建）。不能只写文件不打印，用户需要在会话中直接看到产出并进行确认和讨论。文件命名规则：
 
 | 阶段 | 文件名 | 内容 |
 |------|--------|------|
@@ -47,7 +54,8 @@ description: "Use when the user needs embedded hardware architecture, MCU/SoC se
 | 5. 约束输出 | `04-constraints.md` | 接口矩阵、电源树、PCB/机械/DFM 约束 |
 | 6. 验证计划 | `05-validation.md` | EVT/DVT/PVT 测试项表 |
 | 7. 决策门 | `06-decisions.md` | 已确定/待确认/高风险三类事项 |
-| 8. 模块原理图 | `07-schematics.md` 或 `07-schematics.net` | 按用户选择的方式输出 |
+| 8. 模块原理图 | `07-schematics.md` / `.d2` / `.kicad_sch` / `.json` | 按用户选择的方式输出 |
+| 9. PDF 报告 | `hardware-solution.pdf` | 合并所有阶段产出为完整 PDF |
 
 交付正式方案时（步骤 5），同时按 output-template 结构输出完整方案文件 `hardware-solution.md`。
 
@@ -85,6 +93,7 @@ description: "Use when the user needs embedded hardware architecture, MCU/SoC se
 | "先给个大概方案，细节后面再补" | 输出必须面向落地，泛泛描述不符合输出原则 |
 | "国产替代不适用这个场景" | 必须说明为什么不适用，不能默认跳过国产候选 |
 | "价格和库存我大概知道" | 价格、库存、生命周期必须联网查证，不能凭印象 |
+| "把所有问题一起问效率更高" | 严禁一次性列出多个问题，每次只问 1 个，等用户回复后再继续 |
 
 ## 结构化选项
 

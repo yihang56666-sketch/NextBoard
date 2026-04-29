@@ -102,8 +102,13 @@ install_global_codex() {
   rm -rf "$HOME/.codex/skills/hardware-solution"
   cp -r "$REPO_ROOT/skills/hardware-solution" "$HOME/.codex/skills/"
   info "Skill installed to ~/.codex/skills/hardware-solution"
+
+  mkdir -p "$HOME/.codex/agents"
+  cp "$REPO_ROOT/agents/hardware-reviewer.md" "$HOME/.codex/agents/"
+  info "Agent installed to ~/.codex/agents/hardware-reviewer.md"
+
   echo ""
-  warn "Codex does not support agents or hooks. Skill includes built-in review self-check."
+  warn "Codex does not support hooks. Skill and agent are available, hooks require --plugin-dir mode."
   info "Restart your Codex session to activate."
 }
 
@@ -119,6 +124,7 @@ get_version() {
 
 install_project() {
   local project_path="$1"
+  local platform="${2:-claude}"
 
   if [ ! -d "$project_path" ]; then
     error "Project path does not exist: $project_path"
@@ -128,33 +134,59 @@ install_project() {
   local version
   version="$(get_version)"
 
-  info "NextBoard $version — project-level plugin"
-  echo ""
-  echo "  Claude Code 不支持从项目目录自动加载插件。"
-  echo "  请使用以下方式之一在该项目中启用 NextBoard："
-  echo ""
-  printf "  ${BOLD}方式 1：--plugin-dir（推荐，每次启动时指定）${RESET}\n"
-  echo ""
-  echo "    cd $project_path"
-  echo "    claude --plugin-dir $REPO_ROOT"
-  echo ""
-  printf "  ${BOLD}方式 2：全局安装（所有项目可用）${RESET}\n"
-  echo ""
-  echo "    $0 --global --platform claude"
-  echo ""
-  printf "  ${BOLD}方式 3：Marketplace 安装（需要 GitHub 访问）${RESET}\n"
-  echo ""
-  echo "    claude plugin marketplace add LeoKemp223/NextBoard"
-  echo "    claude plugin install nextboard-hardware-solution"
-  echo ""
+  case "$platform" in
+    codex)
+      info "NextBoard $version — project-level install (Codex) → $project_path"
+      echo ""
+
+      mkdir -p "$project_path/.codex/skills"
+      rm -rf "$project_path/.codex/skills/hardware-solution"
+      cp -r "$REPO_ROOT/skills/hardware-solution" "$project_path/.codex/skills/"
+      info "Skill installed to $project_path/.codex/skills/hardware-solution"
+
+      mkdir -p "$project_path/.codex/agents"
+      cp "$REPO_ROOT/agents/hardware-reviewer.md" "$project_path/.codex/agents/"
+      info "Agent installed to $project_path/.codex/agents/hardware-reviewer.md"
+
+      echo ""
+      info "Restart your Codex session in this project to activate."
+      warn "Hooks not available in Codex."
+      ;;
+    claude)
+      info "NextBoard $version — project-level plugin (Claude Code)"
+      echo ""
+      echo "  Claude Code 不支持从项目目录自动加载插件。"
+      echo "  请使用以下方式之一在该项目中启用 NextBoard："
+      echo ""
+      printf "  ${BOLD}方式 1：--plugin-dir（推荐，每次启动时指定）${RESET}\n"
+      echo ""
+      echo "    cd $project_path"
+      echo "    claude --plugin-dir $REPO_ROOT"
+      echo ""
+      printf "  ${BOLD}方式 2：全局安装（所有项目可用）${RESET}\n"
+      echo ""
+      echo "    $0 --global --platform claude"
+      echo ""
+      printf "  ${BOLD}方式 3：Marketplace 安装（需要 GitHub 访问）${RESET}\n"
+      echo ""
+      echo "    claude plugin marketplace add LeoKemp223/NextBoard"
+      echo "    claude plugin install nextboard-hardware-solution"
+      echo ""
+      ;;
+    *)
+      error "Unknown platform: $platform"
+      exit 1
+      ;;
+  esac
 }
 
 uninstall_project() {
   local project_path="$1"
   local dest="$project_path/.nextboard"
   local plugin_dir="$project_path/.claude-plugin"
+  local codex_dir="$project_path/.codex"
 
-  # clean up legacy project-level installations
+  # clean up legacy and current project-level installations
   local found=false
   for d in "$dest" "$plugin_dir" "$project_path/skills" "$project_path/agents" "$project_path/hooks"; do
     if [ -d "$d" ]; then
@@ -162,6 +194,16 @@ uninstall_project() {
       found=true
     fi
   done
+
+  # clean Codex project-level installation
+  if [ -d "$codex_dir/skills/hardware-solution" ]; then
+    rm -rf "$codex_dir/skills/hardware-solution"
+    found=true
+  fi
+  if [ -f "$codex_dir/agents/hardware-reviewer.md" ]; then
+    rm -f "$codex_dir/agents/hardware-reviewer.md"
+    found=true
+  fi
 
   if [ "$found" = "false" ]; then
     warn "No project-level installation found in $project_path"
@@ -209,7 +251,8 @@ uninstall_global() {
 
   if detect_codex_global; then
     rm -rf "$HOME/.codex/skills/hardware-solution"
-    info "Removed Codex skill"
+    rm -f "$HOME/.codex/agents/hardware-reviewer.md"
+    info "Removed Codex skill and agent"
     removed=true
   fi
 
@@ -346,7 +389,7 @@ case "$MODE" in
     esac
     ;;
   project)
-    install_project "$PROJECT_PATH"
+    install_project "$PROJECT_PATH" "$PLATFORM"
     ;;
   uninstall)
     uninstall_global

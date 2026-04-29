@@ -51,6 +51,7 @@ def warn(msg):
 REQUIRED_REFS = [
     "design-workflow.md",
     "domestic-sources.md",
+    "download-sources.md",
     "output-template.md",
     "review-checklists.md",
     "sourcing-and-risk.md",
@@ -105,14 +106,11 @@ PLATFORM_CONFIG_FILES = [
     ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json",
     ".cursor-plugin/plugin.json",
-    "gemini-extension.json",
 ]
 
 PLATFORM_ENTRY_FILES = [
     "CLAUDE.md",
-    "GEMINI.md",
     "AGENTS.md",
-    ".github/copilot-instructions.md",
 ]
 
 REPO_META_FILES = [

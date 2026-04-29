@@ -12,7 +12,7 @@
 
 ## 快速开始
 
-在 Claude Code、Codex、Cursor、Gemini CLI 或 GitHub Copilot 会话中调用：
+在 Claude Code、Codex 或 Cursor 会话中调用：
 
 ```
 $hardware-solution
@@ -26,7 +26,7 @@ $hardware-solution
 
 ### AI 安装指引
 
-> 本节供 AI 助手（Claude Code、Codex、Cursor、Windsurf、GitHub Copilot、Gemini CLI 等）阅读。当用户要求安装本插件时，按以下流程引导。
+> 本节供 AI 助手（Claude Code、Codex、Cursor 等）阅读。当用户要求安装本插件时，按以下流程引导。
 
 **第一步：确认当前环境**
 
@@ -38,7 +38,7 @@ $hardware-solution
 
 | 方式 | 适用场景 | 可用组件 | 限制 |
 |------|---------|---------|------|
-| 全局安装 | 希望所有项目都能用 | skill + agent | hooks 不生效；Codex 不支持 agent |
+| 全局安装 | 希望所有项目都能用 | skill + agent | hooks 不生效 |
 | --plugin-dir | 开发调试或临时使用 | skill + agent + hooks | 每次启动需指定路径 |
 | Marketplace | 正式分发 | skill + agent + hooks | 需要 GitHub 访问 |
 
@@ -50,7 +50,7 @@ $hardware-solution
 # 全局安装（Claude Code，含 agent）
 ./scripts/install.sh --global --platform claude
 
-# 全局安装（Codex，仅 skill）
+# 全局安装（Codex，skill + agent）
 ./scripts/install.sh --global --platform codex
 
 # --plugin-dir（单次会话加载，skill + agent + hooks 全部可用）
@@ -107,9 +107,12 @@ Codex：
 mkdir -p "$HOME/.codex/skills"
 rm -rf "$HOME/.codex/skills/hardware-solution"
 cp -r skills/hardware-solution "$HOME/.codex/skills/"
+
+mkdir -p "$HOME/.codex/agents"
+cp agents/hardware-reviewer.md "$HOME/.codex/agents/"
 ```
 
-> 全局安装的局限：hooks 无法生效（缺少插件上下文），Codex 不支持 agent。
+> 全局安装的局限：hooks 无法生效（缺少插件上下文）。
 
 #### 方式二：--plugin-dir（推荐开发调试）
 
@@ -157,6 +160,7 @@ cd NextBoard && git pull
 rm -rf "$HOME/.claude/skills/hardware-solution"
 rm -f "$HOME/.claude/agents/hardware-reviewer.md"
 rm -rf "$HOME/.codex/skills/hardware-solution"
+rm -f "$HOME/.codex/agents/hardware-reviewer.md"
 ```
 
 ## 项目结构
@@ -184,11 +188,7 @@ NextBoard/
 ├── .claude-plugin/                      # Claude Code 插件配置
 ├── .codex-plugin/                       # Codex 插件配置
 ├── .cursor-plugin/                      # Cursor 插件配置
-├── .github/
-│   └── copilot-instructions.md          # GitHub Copilot 项目指令
-├── gemini-extension.json                # Gemini CLI 扩展配置
 ├── CLAUDE.md                            # Claude Code / 通用 AI 会话项目指令
-├── GEMINI.md                            # Gemini CLI 入口，@引用 SKILL.md
 └── AGENTS.md                            # Cursor Agent Mode / 通用 Agent 指令
 ```
 
@@ -241,11 +241,8 @@ CLAUDE_PLUGIN_ROOT="$PWD" hooks/session-start | python3 -m json.tool
 | 平台 | 配置文件 | 全局安装 | 项目级插件 |
 |------|---------|---------|-----------|
 | Claude Code | `.claude-plugin/plugin.json` | skill + agent | skill + agent + hooks |
-| Codex | `.codex-plugin/plugin.json` | skill | 不支持插件模式 |
+| Codex | `.codex-plugin/plugin.json` | skill + agent | 不支持插件模式 |
 | Cursor | `.cursor-plugin/plugin.json` | skill（手动 cp） | skill + agent + hooks |
-| Gemini CLI | `gemini-extension.json` + `GEMINI.md` | skill（手动 cp） | 通过 GEMINI.md 加载 |
-| GitHub Copilot | `.github/copilot-instructions.md` | — | 通过 copilot-instructions.md 加载 |
-| 通用 Agent | `AGENTS.md` | — | 通过 AGENTS.md 加载 |
 
 ## License
 
