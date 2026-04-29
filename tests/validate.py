@@ -63,6 +63,7 @@ GATE_HEADERS = [
     "Gate 3",
     "Gate 4",
     "Gate 5",
+    "Gate 6",
 ]
 
 # output-template.md required sections (mapped from Gate 4 checks)
@@ -73,6 +74,7 @@ OUTPUT_TEMPLATE_SECTIONS = [
     "PCB",            # "PCB 与结构约束"
     "验证计划",
     "风险清单",
+    "原理图",         # "模块原理图"
 ]
 
 REVIEWER_DIMENSIONS = [

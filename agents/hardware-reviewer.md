@@ -27,6 +27,8 @@ When reviewing a hardware design proposal, evaluate these five areas:
 - Are interface matrices, power trees, and PCB constraints specific (not generic)?
 - Are pin assignments, voltage levels, current budgets, and timing requirements stated?
 - Can a hardware engineer act on this without guessing?
+- Are module-level schematic fragments provided (power, MCU minimum system, communication, sensor/actuator front-end)?
+- Do schematic fragments include pin connections, component values, and power rail annotations sufficient for EDA capture?
 
 ### 4. Cost Reasonableness
 
