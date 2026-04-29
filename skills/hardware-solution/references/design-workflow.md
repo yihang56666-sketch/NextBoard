@@ -187,8 +187,10 @@ Gate 3 通过后，先询问用户使用的 EDA 工具（KiCad / Altium Designer
 
 所有阶段完成后，将 `docs/hardware/` 目录下的全部 markdown 文件合并输出为 PDF 报告。
 
+脚本位于本技能目录下 `scripts/md_to_pdf.py`（即与 SKILL.md 同级的 `scripts/` 目录）。
+
 ```bash
-python3 scripts/md_to_pdf.py --merge docs/hardware/ docs/hardware/hardware-solution.pdf --title "项目名称-硬件方案报告"
+python3 <skill_root>/scripts/md_to_pdf.py --merge docs/hardware/ docs/hardware/hardware-solution.pdf --title "项目名称-硬件方案报告"
 ```
 
 脚本依赖：`pip install weasyprint markdown`
