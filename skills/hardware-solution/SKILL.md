@@ -39,7 +39,7 @@ description: "Use when the user needs embedded hardware architecture, MCU/SoC se
 8. 涉及关键芯片选型、供应链、认证或替代料时，读取 [references/sourcing-and-risk.md](references/sourcing-and-risk.md)；涉及国产芯片、国内元器件渠道或国产替代时，同时读取 [references/domestic-sources.md](references/domestic-sources.md)。
 9. 每个阶段结束前，读取 [references/verification-gates.md](references/verification-gates.md) 确认门控通过。
 10. 评审通过后询问用户是否需要输出模块原理图。如果用户确认需要，先提供展示方式选项供用户选择（结构化连接表 / ASCII 框图 / D2 图表 / KiCad 原理图文件 .kicad_sch / 立创 EDA JSON），然后按用户选择的方式和指定的模块范围输出。通过 Gate 6 后交付。
-11. 所有阶段完成后，将 `docs/hardware/` 目录下的全部 markdown 文件合并输出为 PDF 报告。运行 `python3 <skill_root>/scripts/md_to_pdf.py --merge docs/hardware/ docs/hardware/hardware-solution.pdf --title "项目名称-硬件方案报告"`（`<skill_root>` 为本技能所在目录，即包含 SKILL.md 的目录）。
+11. 所有阶段完成后，将 `docs/hardware/` 目录下的全部 markdown 文件合并输出为 PDF 报告。运行 `python3 <skill_root>/scripts/md_to_pdf.py --merge docs/hardware/ docs/hardware/hardware-solution.pdf --title "项目名称-硬件方案报告" --theme green`（`<skill_root>` 为本技能所在目录，即包含 SKILL.md 的目录）。脚本支持 `--theme green|blue|gray` 选择配色方案（默认 green），生成前询问用户偏好。
 
 ## 文件输出规则
 
