@@ -18,6 +18,9 @@ Agent会自动帮你进行需求确认，实时分析国内外各类芯片技术
 - 5 道验证门控，阶段性拦截质量问题
 - 独立评审 agent，从完整性、风险、可实施性、成本、验证覆盖 5 个维度打分
 - 供应链风险评估与国产替代参考
+  
+<img width="2379" height="1792" alt="PixPin_2026-05-04_21-51-20" src="https://github.com/user-attachments/assets/c2a7e85a-0fca-44e1-9459-f0d3a0c30525" />
+
 
 ## 快速开始
 
