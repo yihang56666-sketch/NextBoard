@@ -1,4 +1,4 @@
-# NextBoard — Hardware Solution Plugin
+# NextBoard — Hardware Solution Agent
 
 面向硬件产品的PCB方案设计 AI Agent。输入产品需求，输出可评审、可落地的PCB原理图的方案。
 
