@@ -265,3 +265,8 @@ CLAUDE_PLUGIN_ROOT="$PWD" hooks/session-start | python3 -m json.tool
 ## License
 
 MIT
+
+
+感谢 LinuxDo 社区的支持！
+[![LinuxDo](https://img.shields.io/badge/LinuxDo-社区支持-blue)](https://linux.do/)
+
