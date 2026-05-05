@@ -22,6 +22,9 @@ Agent会自动帮你进行需求确认，实时分析国内外各类芯片技术
 - 供应链风险评估与国产替代参考
 
 <img width="3659" height="1458" alt="PixPin_2026-05-05_09-18-28" src="https://github.com/user-attachments/assets/305c73ed-9d26-485b-9a1c-83720c39a806" />
+
+- 产出markdown、datasheet、封装库、pdf方案
+
 <img width="2379" height="1792" alt="PixPin_2026-05-04_21-51-20" src="https://github.com/user-attachments/assets/c2a7e85a-0fca-44e1-9459-f0d3a0c30525" />
 
 
