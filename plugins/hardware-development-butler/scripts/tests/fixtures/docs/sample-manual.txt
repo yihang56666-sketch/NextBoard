@@ -1,0 +1,9 @@
+STM32F407VG quick notes
+VDD supply voltage range must be checked in the official datasheet before powering the board.
+HSE oscillator can be used with an external crystal and PLL clock tree.
+BOOT0 selects the boot mode during reset.
+SWD debug uses PA13 SWDIO and PA14 SWCLK.
+Flash memory and SRAM sizes depend on the exact ordering code.
+USART, I2C, SPI, CAN, ADC, timers, PWM and USB peripherals are available by package variant.
+Absolute maximum ratings and GPIO current limits must not be exceeded.
+Errata documents may list silicon limitations and workarounds.

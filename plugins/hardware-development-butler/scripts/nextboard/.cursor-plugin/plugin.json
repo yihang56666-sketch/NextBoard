@@ -1,0 +1,42 @@
+{
+  "name": "nextboard-hardware-solution",
+  "description": "Hardware solution design skills and workflows for embedded and hardware engineers.",
+  "version": "0.2.0",
+  "author": {
+    "name": "NextBoard"
+  },
+  "license": "MIT",
+  "keywords": [
+    "hardware",
+    "embedded",
+    "schematic",
+    "architecture",
+    "bom",
+    "pcb",
+    "workflow",
+    "design-review",
+    "component-selection"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/",
+  "hooksConfig": "./hooks/hooks-cursor.json",
+  "interface": {
+    "displayName": "NextBoard Hardware Solution",
+    "shortDescription": "Embedded hardware design workflows",
+    "longDescription": "Use this plugin to turn embedded product requirements into hardware architecture options, component selection, power trees, interface plans, PCB constraints, BOM risk notes, and validation plans.",
+    "developerName": "NextBoard",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $hardware-solution to design a hardware proposal for my embedded product.",
+      "Use $hardware-solution to review this schematic and BOM risk."
+    ],
+    "brandColor": "#0F766E",
+    "screenshots": []
+  }
+}

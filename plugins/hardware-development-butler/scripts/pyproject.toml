@@ -1,0 +1,112 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hardware-butler"
+version = "0.1.0"
+description = "Hardware Development Butler for Embedded Systems"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "luhao200"}
+]
+keywords = ["embedded", "hardware", "stm32", "cubemx", "firmware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+]
+ui = [
+    "rich>=13.0.0",
+    "tqdm>=4.65.0",
+]
+cache = [
+    "diskcache>=5.6.0",
+]
+hardware = [
+    "pyocd>=0.36.0",
+    "pylink-square>=1.2.0",
+    "python-can>=4.0.0",
+    "cantools>=39.0.0",
+]
+ai = [
+    "langchain>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "llama-index>=0.10.0",
+]
+reports = [
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+]
+all = [
+    "rich>=13.0.0",
+    "tqdm>=4.65.0",
+    "diskcache>=5.6.0",
+    "pyocd>=0.36.0",
+    "pylink-square>=1.2.0",
+    "python-can>=4.0.0",
+    "cantools>=39.0.0",
+    "langchain>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "llama-index>=0.10.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.scripts]
+hardware-butler = "tools.hardware_butler:main"
+butler = "tools.butler_cli:main"
+
+[project.urls]
+Homepage = "https://github.com/luhao200/hardware-butler"
+Repository = "https://github.com/luhao200/hardware-butler"
+Issues = "https://github.com/luhao200/hardware-butler/issues"
+
+[tool.setuptools.packages.find]
+include = ["tools*", "embeddedskills*", "nextboard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "validate_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v -p no:cacheprovider --basetemp=.tmp-pytest --cov=tools --cov=embeddedskills --cov-report=term-missing"
+markers = [
+    "hardware: tests that require connected probes, boards, or physical interfaces",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501", "E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

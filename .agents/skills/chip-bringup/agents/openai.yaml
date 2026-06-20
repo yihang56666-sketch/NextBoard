@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Chip Bring-Up"
+  short_description: "资料检索、芯片手册总结、CubeMX 配置和安全 bring-up 工作流"
+  default_prompt: "帮我为指定芯片或开发板建立资料档案，说明 CubeMX/引脚配置，并规划安全的固件实现、编译、烧录和调试闭环。"

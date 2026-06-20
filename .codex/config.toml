@@ -1,0 +1,14 @@
+[features]
+multi_agent = true
+
+[agents.hardware-development-butler]
+description = "Top-level hardware development butler that plans, routes, and closes the loop across hardware knowledge, documents, firmware build, flash, debug, and issue repair."
+config = ".codex/agents/hardware-development-butler.toml"
+
+[agents.nextboard-hardware-architect]
+description = "Hardware proposal, component selection, BOM risk, PCB constraints, validation planning, and design review."
+config = ".codex/agents/nextboard-hardware-architect.toml"
+
+[agents.embeddedskills-lab-operator]
+description = "Embedded build, flash, debug, observe, serial, CAN, network, and workflow orchestration."
+config = ".codex/agents/embeddedskills-lab-operator.toml"

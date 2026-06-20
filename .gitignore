@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local agent/client state
+**/.claude/settings.local.json
+.agents/.agents/reports/
+
+# embeddedskills is maintained as an independent repository.
+embeddedskills/
+
+.pytest_cache/
+.tmp-pytest/
+.mypy_cache/
+.ruff_cache/
+plugins/hardware-development-butler/scripts/.ruff_cache/
+.coverage
+htmlcov/
+
+tests/.tmp-pytest/
+tests/.tmp-plugin-smoke/
+tests/tmp/
+plugins/hardware-development-butler/scripts/tests/.tmp-pytest/
+plugins/hardware-development-butler/scripts/tests/.tmp-plugin-smoke/
+plugins/hardware-development-butler/scripts/*tmp-plugin-smoke/
+plugins/hardware-development-butler/scripts/tests/tmp/

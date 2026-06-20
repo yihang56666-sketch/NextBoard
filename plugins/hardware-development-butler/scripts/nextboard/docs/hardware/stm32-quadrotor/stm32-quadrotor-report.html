@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <style>
+@page {
+    size: A4;
+    margin: 25mm 20mm 20mm 20mm;
+
+    @top-center {
+        content: "STM32小型四旋翼无人机硬件方案报告 | NextBoard Hardware Solution";
+        font-family: "Droid Sans Fallback", "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #95a5a6;
+        border-bottom: 0.5pt solid #ecf0f1;
+        padding-bottom: 3mm;
+    }
+
+    @bottom-center {
+        content: "第 " counter(page) " 页";
+        font-family: "Droid Sans Fallback", "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #95a5a6;
+        border-top: 0.8pt solid #0F766E;
+        padding-top: 2mm;
+    }
+}
+
+@page :first {
+    @top-center { content: none; }
+    @bottom-center { content: none; }
+}
+
+body {
+    font-family: "Droid Sans Fallback", "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.75;
+    color: #2c3e50;
+    text-align: justify;
+}
+
+.cover { page-break-after: always; text-align: center; padding-top: 40%; }
+.cover h1 { font-size: 26pt; color: #0F766E; margin-bottom: 8mm; font-weight: bold; letter-spacing: 2pt; }
+.cover .subtitle { font-size: 14pt; color: #95a5a6; margin-bottom: 6mm; }
+.cover .meta { font-size: 11pt; color: #95a5a6; margin-bottom: 4mm; }
+.cover .divider { width: 60%; margin: 8mm auto; border: none; border-top: 1.5pt solid #0F766E; }
+
+h1 { font-size: 20pt; color: #0F766E; margin-top: 16mm; margin-bottom: 6mm; padding-bottom: 3mm; border-bottom: 2pt solid #0F766E; page-break-before: always; font-weight: bold; }
+h2 { font-size: 14pt; color: #1e8449; margin-top: 10mm; margin-bottom: 5mm; font-weight: bold; }
+h3 { font-size: 12pt; color: #2e86c1; margin-top: 6mm; margin-bottom: 3mm; font-weight: bold; }
+h4 { font-size: 11pt; color: #5b2c6f; margin-top: 5mm; margin-bottom: 2mm; font-weight: bold; }
+
+p { margin-top: 1.5mm; margin-bottom: 1.5mm; orphans: 3; widows: 3; }
+blockquote { margin: 4mm 0; padding: 4mm 4mm 4mm 10mm; background: #f8f9fa; border-left: 3pt solid #0F766E; color: #5d6d7e; font-size: 10pt; }
+blockquote p { margin: 1mm 0; }
+strong, b { font-weight: bold; color: #1a252f; }
+
+code { font-family: "Courier New", Courier, monospace; background: #fdf2e9; color: #c0392b; padding: 0.5mm 1.5mm; border-radius: 2pt; font-size: 9.5pt; }
+pre { background: #f4f6f7; color: #2c3e50; padding: 4mm; border-radius: 3pt; font-size: 9pt; line-height: 1.5; overflow-wrap: break-word; white-space: pre-wrap;  }
+pre code { background: none; color: inherit; padding: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9.5pt; }
+thead th { background: #0F766E; color: white; padding: 3mm; text-align: left; font-weight: bold; }
+tbody td { padding: 2.5mm 3mm; border-bottom: 0.5pt solid #bdc3c7; }
+tbody tr:nth-child(even) { background: #f8f9fa; }
+
+hr { border: none; border-top: 0.5pt solid #bdc3c7; margin: 4mm 0; }
+ul, ol { margin: 2mm 0; padding-left: 8mm; }
+li { margin-bottom: 1mm; }
+a { color: #2e86c1; text-decoration: none; }
+</style>
+</head>
+<body>
+
+    <div class="cover">
+        <h1 style="page-break-before: avoid; border: none;">STM32小型四旋翼无人机硬件方案报告</h1>
+        <div class="subtitle">NextBoard Hardware Solution</div>
+        <div class='meta'># STM32 小型四旋翼无人机项目包</div>
+        <hr class="divider">
+        <div class="meta">作者: 小智学长</div>
+    </div>
+
+
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 01 - Requirements<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>目标</h2>
+<p>做一台可实验、可迭代、可悬停的小型四旋翼原型，优先验证飞控链路、姿态控制、电源和安全策略。</p>
+<h2>关键约束</h2>
+<ul>
+<li>机型：75 mm 到 3 寸级实验平台</li>
+<li>控制器：STM32 G4 系列，优先 STM32G431</li>
+<li>执行链路：外置 4-in-1 ESC + 无刷电机</li>
+<li>传感器：SPI 六轴 IMU，优先高输出数据率器件</li>
+<li>供电：2S 或 3S 锂电</li>
+<li>调试：SWD + 串口日志</li>
+<li>第一版不做：自研电调、高级避障、图传、云台</li>
+</ul>
+<h2>核心功能</h2>
+<ul>
+<li>姿态估计</li>
+<li>三轴角速度闭环</li>
+<li>电机混控</li>
+<li>解锁/上锁</li>
+<li>低电压保护</li>
+<li>失控/掉线保护</li>
+<li>日志和地面调参接口</li>
+</ul>
+<h2>成功标准</h2>
+<ul>
+<li>地面台架能稳定识别姿态</li>
+<li>四电机方向和响应一致</li>
+<li>无桨测试下 PID 可调通</li>
+<li>上桨后可完成短时悬停实验</li>
+</ul>
+<h2>已知假设</h2>
+<ul>
+<li>电机和 ESC 采用成熟现成方案</li>
+<li>先用飞控板 + 电调分离架构</li>
+<li>先追求稳定和可维护，不追求极限续航</li>
+</ul>
+<hr>
+<h1>STM32 小型四旋翼无人机架构</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 02 - Architecture<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>总体方案</h2>
+<p>推荐采用“STM32 飞控板 + 外置 4-in-1 ESC + 轻量机架”的分体式架构。这样能把高速功率部分与控制部分分开，降低第一版风险，也方便后续换机架和换电机。</p>
+<h2>方案选择</h2>
+<h3>推荐方案 A</h3>
+<p>STM32G431 + SPI IMU + 4-in-1 ESC + 2S/3S 电池</p>
+<ul>
+<li>优点：实时性好，控制资源足，适合飞控</li>
+<li>缺点：需要更认真做 PCB 和供电隔离</li>
+</ul>
+<h3>备选方案 B</h3>
+<p>STM32F405/F411 + SPI IMU + 4-in-1 ESC + 2S/3S 电池</p>
+<ul>
+<li>优点：生态成熟</li>
+<li>缺点：控制资源和模拟外设不如 G4 贴近电机控制需求</li>
+</ul>
+<h3>不推荐方案 C</h3>
+<p>STM32 + 自研四路无刷驱动</p>
+<ul>
+<li>优点：集成度高</li>
+<li>缺点：第一版风险太大，调试成本高</li>
+</ul>
+<h2>模块划分</h2>
+<ul>
+<li>飞控主控：STM32G431</li>
+<li>姿态传感：ICM-42688-P 级 SPI IMU</li>
+<li>高度辅助：BMP390 级气压计，可选</li>
+<li>供电：VBAT -&gt; 5V -&gt; 3.3V</li>
+<li>通信：USB 或 UART 调试口，预留接收机输入</li>
+<li>执行：4 路 ESC 输出</li>
+</ul>
+<h2>数据流</h2>
+<p>IMU -&gt; 姿态估计 -&gt; PID -&gt; 混控 -&gt; ESC -&gt; 电机</p>
+<h2>风险点</h2>
+<ul>
+<li>IMU 抖动和振动耦合</li>
+<li>电源噪声导致传感器读数不稳</li>
+<li>板级布局不当导致 USB/SWD 调试不稳定</li>
+<li>首版参数调得过激导致炸机</li>
+</ul>
+<hr>
+<h1>STM32 小型四旋翼无人机器件建议</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 03 - Components<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>主控</h2>
+<h3>推荐：STM32G431</h3>
+<ul>
+<li>理由：G4 系列面向电机控制，资源更适合飞控实时任务</li>
+<li>用途：主控制、PID、串口调参、状态机、混控</li>
+<li>选择原则：优先拿到官方数据手册确认封装、Flash、RAM、定时器和 ADC 资源</li>
+</ul>
+<h2>姿态传感器</h2>
+<h3>推荐：ICM-42688-P</h3>
+<ul>
+<li>理由：SPI 接口、适合高频姿态采样</li>
+<li>用途：陀螺仪与加速度计主传感器</li>
+<li>选择原则：优先官方数据手册，确认量程、输出速率、噪声和工作电压</li>
+</ul>
+<h2>辅助传感器</h2>
+<h3>可选：BMP390</h3>
+<ul>
+<li>理由：用于低速高度辅助</li>
+<li>用途：起降和悬停辅助</li>
+<li>选择原则：如果第一版预算紧，可先不装</li>
+</ul>
+<h2>通信与调试</h2>
+<ul>
+<li>SWD 调试口</li>
+<li>UART 日志口</li>
+<li>接收机输入：SBUS 或 CRSF 任选其一</li>
+</ul>
+<h2>执行链路</h2>
+<ul>
+<li>4-in-1 ESC</li>
+<li>4 个无刷电机</li>
+<li>推荐先用成熟电机尺寸和 KV，不自研驱动</li>
+</ul>
+<h2>电源</h2>
+<ul>
+<li>电池：2S 或 3S LiPo</li>
+<li>主电源：VBAT</li>
+<li>降压：VBAT -&gt; 5V -&gt; 3.3V</li>
+<li>传感器与 MCU 统一 3.3V 域，模拟/数字去耦分开</li>
+</ul>
+<h2>先验结论</h2>
+<ul>
+<li>第一版最关键的是 IMU、供电和布局，不是芯片堆料</li>
+<li>不要把预算花在复杂外设上，先把飞稳做出来</li>
+</ul>
+<hr>
+<h1>STM32 小型四旋翼无人机约束</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 04 - Constraints<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>接口约束</h2>
+<ul>
+<li>IMU 走 SPI，不建议第一版用 I2C 主姿态链路</li>
+<li>SWD 必须保留</li>
+<li>UART 调试口必须保留</li>
+<li>4 路电调输出必须独立</li>
+</ul>
+<h2>电源约束</h2>
+<ul>
+<li>3.3V 数字电源要干净</li>
+<li>IMU 和 MCU 供电去耦要靠近器件</li>
+<li>5V 与 VBAT 侧要注意大电流回路</li>
+<li>外部电机电流不要穿过控制地</li>
+</ul>
+<h2>PCB 约束</h2>
+<ul>
+<li>IMU 靠近板中心放置</li>
+<li>尽量让主轴对称</li>
+<li>远离电源开关节点和电机大电流走线</li>
+<li>高速走线短而直</li>
+<li>4 层板更稳妥</li>
+</ul>
+<h2>机械约束</h2>
+<ul>
+<li>首版优先小机架</li>
+<li>飞控板要能装进常见 75 mm 到 3 寸机架</li>
+<li>重心尽量贴近机体中心</li>
+</ul>
+<h2>走线宽度保守值</h2>
+<p>按 10°C 温升、外层、1 oz 铜估算：</p>
+<ul>
+<li>0.5 A 级信号/小电源：约 4.47 mil</li>
+<li>2 A 级电源：约 30.28 mil</li>
+</ul>
+<p>因此主电源走线、地回流和 ESC 供电应明显宽于普通信号线。</p>
+<hr>
+<h1>STM32 小型四旋翼无人机验证计划</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 05 - Validation<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>EVT</h2>
+<ul>
+<li>检查 MCU 上电和 SWD 连接</li>
+<li>验证 IMU 读数稳定</li>
+<li>验证 UART 日志输出</li>
+<li>验证接收机输入解码</li>
+</ul>
+<h2>台架测试</h2>
+<ul>
+<li>单电机方向测试</li>
+<li>四电机混控测试</li>
+<li>解锁/上锁测试</li>
+<li>失控保护测试</li>
+</ul>
+<h2>无桨测试</h2>
+<ul>
+<li>姿态响应测试</li>
+<li>PID 参数粗调</li>
+<li>电源纹波检查</li>
+<li>温升检查</li>
+</ul>
+<h2>上桨短悬停</h2>
+<ul>
+<li>低油门起飞</li>
+<li>轻微扰动恢复</li>
+<li>低电压保护</li>
+<li>紧急断油</li>
+</ul>
+<h2>通过标准</h2>
+<ul>
+<li>传感器无明显异常跳变</li>
+<li>控制环无持续振荡</li>
+<li>电源不掉压到危险区</li>
+<li>保护逻辑可以稳定触发</li>
+</ul>
+<hr>
+<h1>STM32 小型四旋翼无人机决策记录</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 06 - Decisions<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>已决定</h2>
+<ul>
+<li>主控：STM32G431</li>
+<li>架构：飞控板 + 外置 4-in-1 ESC</li>
+<li>主姿态传感：SPI IMU</li>
+<li>第一版不做自研三相功率级</li>
+<li>第一版不做图传和云台</li>
+</ul>
+<h2>待确认</h2>
+<ul>
+<li>机架尺寸：75 mm 还是 3 寸</li>
+<li>电池节数：2S 还是 3S</li>
+<li>接收机协议：SBUS 还是 CRSF</li>
+<li>是否加入气压计</li>
+<li>是否后续接入 GPS</li>
+</ul>
+<h2>高风险项</h2>
+<ul>
+<li>飞控板布局</li>
+<li>电源噪声</li>
+<li>PID 调参</li>
+<li>首次上桨</li>
+</ul>
+<hr>
+<h1>STM32 小型四旋翼无人机原理图连接表</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Stage:</strong> 07 - Schematic Link Map<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>模块连接</h2>
+<h3>STM32G431</h3>
+<ul>
+<li>VDD -&gt; 3.3V</li>
+<li>VSS -&gt; GND</li>
+<li>NRST -&gt; 复位电路 + 调试口</li>
+<li>SWDIO/SWCLK -&gt; 调试口</li>
+<li>SPI1 -&gt; IMU</li>
+<li>UART1 -&gt; 日志口</li>
+<li>UART2 -&gt; 接收机或地面站</li>
+<li>TIM -&gt; 4 路电调输出</li>
+</ul>
+<h3>ICM-42688-P</h3>
+<ul>
+<li>VDD -&gt; 3.3V</li>
+<li>GND -&gt; GND</li>
+<li>SCK/MISO/MOSI/CS -&gt; STM32 SPI</li>
+<li>INT1 -&gt; 中断输入</li>
+</ul>
+<h3>BMP390（可选）</h3>
+<ul>
+<li>VDD -&gt; 3.3V</li>
+<li>GND -&gt; GND</li>
+<li>SCK/MISO/MOSI/CS -&gt; 共享 SPI 或独立 SPI</li>
+</ul>
+<h3>电源</h3>
+<ul>
+<li>电池输入 -&gt; 保护/开关 -&gt; 5V 降压</li>
+<li>5V -&gt; 3.3V LDO/DC-DC</li>
+<li>3.3V -&gt; MCU + 传感器</li>
+</ul>
+<h3>执行器</h3>
+<ul>
+<li>MOTOR1..4 -&gt; 4-in-1 ESC 信号</li>
+</ul>
+<h2>布局优先级</h2>
+<ol>
+<li>IMU 放板中心</li>
+<li>电源和开关节点远离 IMU</li>
+<li>SWD 口靠板边</li>
+<li>传感器和 MCU 的去耦电容贴近引脚</li>
+</ol>
+<hr>
+<h1>STM32 小型四旋翼无人机项目包</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Status:</strong> 方案阶段<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>这是什么</h2>
+<p>这是一个基于 STM32 的小型四旋翼无人机硬件方案包，目标是先做出能实验、能调、能悬停的原型机。</p>
+<h2>当前内容</h2>
+<ul>
+<li><code>01-requirements.md</code></li>
+<li><code>02-architecture.md</code></li>
+<li><code>03-components.md</code></li>
+<li><code>04-constraints.md</code></li>
+<li><code>05-validation.md</code></li>
+<li><code>06-decisions.md</code></li>
+<li><code>07-schematics.md</code></li>
+<li><code>hardware-solution.md</code></li>
+<li><code>plan.md</code></li>
+</ul>
+<h2>当前结论</h2>
+<ul>
+<li>主控推荐 STM32G431</li>
+<li>姿态传感推荐 SPI IMU</li>
+<li>第一版用外置 4-in-1 ESC</li>
+<li>第一版不做自研电调</li>
+</ul>
+<h2>下一步</h2>
+<ol>
+<li>确认机架尺寸</li>
+<li>确认电池规格</li>
+<li>进入原理图引脚级设计</li>
+<li>再做 PCB 和 BOM</li>
+</ol>
+<hr>
+<h1>STM32 小型四旋翼无人机方案汇总</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Version:</strong> 0.1<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>方案概述</h2>
+<p>这是一台面向实验和迭代的 STM32 小型四旋翼无人机原型，采用 STM32G431 作为飞控主控，配合 SPI IMU、外置 4-in-1 ESC 和 2S/3S 锂电池，优先完成姿态稳定、混控、保护和短时悬停验证。</p>
+<h2>关键选择</h2>
+<ul>
+<li>主控：STM32G431</li>
+<li>姿态传感：ICM-42688-P</li>
+<li>高度辅助：BMP390，可选</li>
+<li>执行链路：成熟 4-in-1 ESC + 无刷电机</li>
+<li>供电：VBAT -&gt; 5V -&gt; 3.3V</li>
+</ul>
+<h2>风险</h2>
+<ul>
+<li>供电噪声</li>
+<li>振动耦合</li>
+<li>首次调参过激</li>
+<li>机身重心与 IMU 布局不合理</li>
+</ul>
+<h2>下一步</h2>
+<ol>
+<li>确认机架尺寸</li>
+<li>确认电池节数</li>
+<li>确认接收机协议</li>
+<li>开始原理图和 PCB</li>
+</ol>
+<hr>
+<h1>STM32 Quadrotor Implementation Plan</h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Build a small STM32-based quadcopter hardware package that is realistic to prototype and iterate.</p>
+<p><strong>Architecture:</strong> Use a split control/power architecture: STM32G431 flight controller, SPI IMU, optional barometer, external 4-in-1 ESC, and a 2S/3S battery. Keep the first version focused on stable attitude control, protection logic, and PCB/layout discipline.</p>
+<p><strong>Tech Stack:</strong> STM32G4, SPI IMU, UART logging, SWD debug, external ESC, KiCad/JLCPCB workflow</p>
+<hr>
+<h3>Task 1: Freeze requirements</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/01-requirements.md</code><br>
+- Modify: <code>docs/hardware/hardware-solution.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Review the target use case</strong></li>
+</ul>
+<pre><code class="language-text">Small experimental quadrotor, 75 mm to 3 inch class, STM32 flight controller, external ESC, no custom power stage in v1.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Record non-goals</strong></li>
+</ul>
+<pre><code class="language-text">No custom ESC, no vision stack, no gimbal, no GPS in v1.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify the requirements file exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\01-requirements.md</code><br>
+Expected: file listed</p>
+<h3>Task 2: Lock architecture</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/02-architecture.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Choose the flight-control architecture</strong></li>
+</ul>
+<pre><code class="language-text">STM32G431 + SPI IMU + external 4-in-1 ESC + 2S/3S battery.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Document the fallback architecture</strong></li>
+</ul>
+<pre><code class="language-text">STM32F405/F411 can serve as a fallback if G4 parts are unavailable.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify the architecture file exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\02-architecture.md</code><br>
+Expected: file listed</p>
+<h3>Task 3: Select components</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/03-components.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Record the primary MCU and sensors</strong></li>
+</ul>
+<pre><code class="language-text">MCU: STM32G431
+IMU: ICM-42688-P
+Optional barometer: BMP390
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Record the power and execution chain</strong></li>
+</ul>
+<pre><code class="language-text">Battery -&gt; protection -&gt; 5V -&gt; 3.3V -&gt; MCU and sensors; 4 motors via external ESC.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify the components file exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\03-components.md</code><br>
+Expected: file listed</p>
+<h3>Task 4: Define board constraints</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/04-constraints.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Write the signal and power rules</strong></li>
+</ul>
+<pre><code class="language-text">SPI for IMU, SWD required, UART required, keep motor current out of control ground.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Add routing guidance</strong></li>
+</ul>
+<pre><code class="language-text">Center the IMU, keep it away from switching nodes, prefer a 4-layer board.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify the constraints file exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\04-constraints.md</code><br>
+Expected: file listed</p>
+<h3>Task 5: Create validation plan</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/05-validation.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Define bring-up tests</strong></li>
+</ul>
+<pre><code class="language-text">Power, SWD, IMU readout, UART logging, receiver input.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Define flight tests</strong></li>
+</ul>
+<pre><code class="language-text">Motor direction, mixing, no-prop attitude response, short hover.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify the validation file exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\05-validation.md</code><br>
+Expected: file listed</p>
+<h3>Task 6: Capture decisions and schematic map</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/06-decisions.md</code><br>
+- Create: <code>docs/hardware/07-schematics.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Freeze the current design decisions</strong></li>
+</ul>
+<pre><code class="language-text">MCU fixed to STM32G431; no custom ESC in v1.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Map the major nets</strong></li>
+</ul>
+<pre><code class="language-text">SPI -&gt; IMU, UART -&gt; debug and receiver, TIM outputs -&gt; ESC, SWD -&gt; debug.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 3: Verify both files exist</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\06-decisions.md, docs\hardware\07-schematics.md</code><br>
+Expected: both files listed</p>
+<h3>Task 7: Merge into one deliverable</h3>
+<p><strong>Files:</strong><br>
+- Create: <code>docs/hardware/hardware-solution.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Summarize the buildable version</strong></li>
+</ul>
+<pre><code class="language-text">Short, realistic quadcopter package with clear next steps.
+</code></pre>
+<ul>
+<li>[ ] <strong>Step 2: Verify the summary exists</strong></li>
+</ul>
+<p>Run: <code>Get-ChildItem docs\hardware\hardware-solution.md</code><br>
+Expected: file listed</p>
+<hr>
+<h1>STM32 小型四旋翼无人机硬件方案报告</h1>
+<p><strong>Project:</strong> STM32 Small Quadrotor Drone<br>
+<strong>Version:</strong> 0.1<br>
+<strong>Date:</strong> 2026-06-01</p>
+<h2>1. 项目目标</h2>
+<p>做一台可实验、可迭代、可悬停的小型四旋翼原型，优先验证飞控链路、姿态控制、电源和安全策略。</p>
+<h2>2. 核心约束</h2>
+<ul>
+<li>机型：75 mm 到 3 寸级实验平台</li>
+<li>主控：STM32 G4 系列，优先 STM32G431</li>
+<li>执行链路：外置 4-in-1 ESC + 无刷电机</li>
+<li>传感器：SPI 六轴 IMU</li>
+<li>供电：2S 或 3S 锂电</li>
+<li>调试：SWD + 串口日志</li>
+<li>第一版不做：自研电调、高级避障、图传、云台</li>
+</ul>
+<h2>3. 推荐架构</h2>
+<p>推荐采用“STM32 飞控板 + 外置 4-in-1 ESC + 轻量机架”的分体式架构。</p>
+<p>数据流：</p>
+<pre><code class="language-text">IMU -&gt; 姿态估计 -&gt; PID -&gt; 混控 -&gt; ESC -&gt; 电机
+</code></pre>
+<p>这种架构把高速功率部分与控制部分分开，降低第一版风险，也方便后续换机架、换电机和调试控制算法。</p>
+<h2>4. 关键器件</h2>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>推荐器件/方案</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MCU</td>
+<td>STM32G431</td>
+<td>用于主控制、PID、混控、接口管理</td>
+</tr>
+<tr>
+<td>IMU</td>
+<td>ICM-42688-P 级 SPI IMU</td>
+<td>用于姿态估计主传感</td>
+</tr>
+<tr>
+<td>高度辅助</td>
+<td>BMP390 级气压计</td>
+<td>可选，第一版可不装</td>
+</tr>
+<tr>
+<td>电调</td>
+<td>成品 4-in-1 ESC</td>
+<td>降低功率级调试风险</td>
+</tr>
+<tr>
+<td>电源</td>
+<td>VBAT -&gt; 5V -&gt; 3.3V</td>
+<td>MCU 和传感器统一 3.3V 域</td>
+</tr>
+</tbody>
+</table>
+<h2>5. 电源树</h2>
+<pre><code class="language-text">2S/3S LiPo
+  -&gt; VBAT 输入保护
+  -&gt; 5V 降压
+  -&gt; 3.3V 稳压
+  -&gt; STM32 + IMU + 通信接口
+</code></pre>
+<p>电机大电流路径不要穿过控制地。IMU 与 MCU 的去耦电容必须靠近引脚。</p>
+<h2>6. 接口规划</h2>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>用途</th>
+<th>约束</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPI</td>
+<td>IMU 主链路</td>
+<td>不建议第一版用 I2C 做主姿态链路</td>
+</tr>
+<tr>
+<td>SWD</td>
+<td>下载和调试</td>
+<td>必须保留</td>
+</tr>
+<tr>
+<td>UART</td>
+<td>日志/接收机/地面站</td>
+<td>至少保留 2 路</td>
+</tr>
+<tr>
+<td>TIM 输出</td>
+<td>4 路 ESC 信号</td>
+<td>独立输出</td>
+</tr>
+</tbody>
+</table>
+<h2>7. PCB 约束</h2>
+<ul>
+<li>IMU 靠近板中心</li>
+<li>主轴尽量对称</li>
+<li>IMU 远离电源开关节点和电机大电流走线</li>
+<li>传感器和 MCU 去耦电容贴近引脚</li>
+<li>4 层板优先</li>
+</ul>
+<p>走线宽度参考：</p>
+<ul>
+<li>0.5 A 级小电源：约 4.47 mil</li>
+<li>2 A 级电源：约 30.28 mil</li>
+</ul>
+<h2>8. 原理图连接摘要</h2>
+<h3>STM32G431</h3>
+<ul>
+<li>VDD -&gt; 3.3V</li>
+<li>VSS -&gt; GND</li>
+<li>NRST -&gt; 复位电路 + 调试口</li>
+<li>SWDIO/SWCLK -&gt; 调试口</li>
+<li>SPI1 -&gt; IMU</li>
+<li>UART1 -&gt; 日志口</li>
+<li>UART2 -&gt; 接收机或地面站</li>
+<li>TIM -&gt; 4 路电调输出</li>
+</ul>
+<h3>ICM-42688-P</h3>
+<ul>
+<li>VDD -&gt; 3.3V</li>
+<li>GND -&gt; GND</li>
+<li>SCK/MISO/MOSI/CS -&gt; STM32 SPI</li>
+<li>INT1 -&gt; 中断输入</li>
+</ul>
+<h2>9. 验证计划</h2>
+<h3>EVT</h3>
+<ul>
+<li>MCU 上电</li>
+<li>SWD 连接</li>
+<li>IMU 读数</li>
+<li>UART 日志</li>
+<li>接收机输入</li>
+</ul>
+<h3>台架测试</h3>
+<ul>
+<li>单电机方向</li>
+<li>四电机混控</li>
+<li>解锁/上锁</li>
+<li>失控保护</li>
+</ul>
+<h3>无桨测试</h3>
+<ul>
+<li>姿态响应</li>
+<li>PID 粗调</li>
+<li>电源纹波</li>
+<li>温升</li>
+</ul>
+<h3>上桨短悬停</h3>
+<ul>
+<li>低油门起飞</li>
+<li>扰动恢复</li>
+<li>低电压保护</li>
+<li>紧急断油</li>
+</ul>
+<h2>10. 风险清单</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>等级</th>
+<th>缓解动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU 振动耦合</td>
+<td>高</td>
+<td>IMU 居中，结构减振，无桨先看频谱</td>
+</tr>
+<tr>
+<td>电源噪声</td>
+<td>高</td>
+<td>分区布局，去耦贴近，台架测纹波</td>
+</tr>
+<tr>
+<td>PID 过激</td>
+<td>高</td>
+<td>无桨调试，限幅，低油门首次起飞</td>
+</tr>
+<tr>
+<td>首版板框不适配机架</td>
+<td>中</td>
+<td>先确认 75 mm 或 3 寸机架规格</td>
+</tr>
+<tr>
+<td>接收机协议不确定</td>
+<td>中</td>
+<td>原理图预留 UART，固件支持 SBUS/CRSF 二选一</td>
+</tr>
+</tbody>
+</table>
+<h2>11. 已决策与待确认</h2>
+<p>已决策：</p>
+<ul>
+<li>主控：STM32G431</li>
+<li>架构：飞控板 + 外置 4-in-1 ESC</li>
+<li>主姿态传感：SPI IMU</li>
+<li>第一版不做自研三相功率级</li>
+</ul>
+<p>待确认：</p>
+<ul>
+<li>机架尺寸：75 mm 还是 3 寸</li>
+<li>电池节数：2S 还是 3S</li>
+<li>接收机协议：SBUS 还是 CRSF</li>
+<li>是否加入气压计</li>
+</ul>
+<h2>12. 下一步</h2>
+<ol>
+<li>确认机架尺寸和电池</li>
+<li>细化 STM32G431 引脚分配</li>
+<li>生成原理图</li>
+<li>完成 PCB 约束和布局</li>
+<li>输出采购 BOM</li>
+</ol>
+</body>
+</html>

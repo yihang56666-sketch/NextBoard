@@ -1,0 +1,34 @@
+{
+  "name": "hardware-development-butler",
+  "version": "0.1.0",
+  "description": "Safety-first embedded hardware development butler with project onboarding, CubeMX/toolchain discovery, diagnostics, and gated lab workflows.",
+  "author": {
+    "name": "Local developer"
+  },
+  "license": "MIT",
+  "keywords": [
+    "embedded",
+    "hardware",
+    "cubemx",
+    "keil",
+    "debug"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hardware Development Butler",
+    "shortDescription": "Safe embedded hardware project manager.",
+    "longDescription": "Packages a local hardware development butler for onboarding embedded projects, searching and downloading chip manuals, summarizing datasheet evidence, advising CubeMX pin/peripheral setup, planning FreeRTOS firmware implementation, proposing embeddedskills config, classifying build logs, and keeping build/flash/debug/observe actions behind explicit confirmation-token gates.",
+    "developerName": "Local developer",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write",
+      "Local Automation"
+    ],
+    "defaultPrompt": [
+      "Safely onboard this CubeMX hardware project.",
+      "Diagnose this embedded build log.",
+      "Prepare a gated build/flash/debug plan."
+    ]
+  }
+}

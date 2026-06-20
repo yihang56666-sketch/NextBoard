@@ -1,0 +1,17 @@
+{
+  "workspace": {
+    "root": ".",
+    "allowed_roots": ["."],
+    "chip_cache_dir": "~/.hardware-butler/chip-cache"
+  },
+  "tools": {
+    "jlink": null,
+    "openocd": null,
+    "probe_rs": null,
+    "keil_uvision": null
+  },
+  "logging": {
+    "level": "INFO",
+    "file": null
+  }
+}
