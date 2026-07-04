@@ -278,6 +278,27 @@ def build_report(
     )
 
 
+def build_runtime_error_report(*, owner: str, repo: str, branch: str, error: str) -> AuditReport:
+    return AuditReport(
+        schema_version=1,
+        status="error",
+        repository=f"{owner}/{repo}",
+        branch=branch,
+        checks=[
+            AuditCheck(
+                name="audit.runtime",
+                status="error",
+                message=error,
+                next_action=(
+                    "Check network access, GitHub availability, the configured remote/branch, "
+                    "and any required credentials, then rerun this audit."
+                ),
+                details={"error": error},
+            )
+        ],
+    )
+
+
 def configure_stdio() -> None:
     for stream in (sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
@@ -325,7 +346,8 @@ def main(argv: list[str] | None = None) -> int:
             remote=args.remote,
         )
     except RuntimeError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        report = build_runtime_error_report(owner=args.owner, repo=args.repo, branch=args.branch, error=str(exc))
+        print_report(report, as_json=args.json)
         return 2
     print_report(report, as_json=args.json)
     return 0 if report.status == "ok" else 1

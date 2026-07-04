@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from tools import github_launch_audit
 
 
@@ -100,6 +102,22 @@ def test_human_report_prints_next_actions_for_errors(capsys) -> None:
     assert "next: Push local commits with `git push origin main`" in output
     assert "next: Set the GitHub About description" in output
     assert "next: Add these GitHub repository topics" in output
+
+
+def test_runtime_errors_are_structured_json(monkeypatch, capsys) -> None:
+    def raise_network_error() -> str:
+        raise RuntimeError("fatal: unable to access remote")
+
+    monkeypatch.setattr(github_launch_audit, "local_head", raise_network_error)
+
+    exit_code = github_launch_audit.main(["--json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 2
+    assert payload["status"] == "error"
+    assert payload["checks"][0]["name"] == "audit.runtime"
+    assert "fatal: unable to access remote" in payload["checks"][0]["message"]
+    assert "Check network access" in payload["checks"][0]["next_action"]
 
 
 def test_workflow_404_is_treated_as_missing_run(monkeypatch) -> None:

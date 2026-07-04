@@ -85,6 +85,9 @@ python tools\github_launch_audit.py --json
 
 For an operator-friendly checklist, run the same command without `--json`; any
 failing check prints a `next:` line with the exact follow-up action.
+If the audit cannot reach GitHub or the configured remote, `--json` still emits
+a structured `audit.runtime` failure so scripts can surface the infrastructure
+problem without parsing stderr.
 
 ## 5. Tag
 
