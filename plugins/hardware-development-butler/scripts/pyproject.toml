@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hardware-butler"
 version = "0.1.0"
-description = "Hardware Development Butler for Embedded Systems"
+description = "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
