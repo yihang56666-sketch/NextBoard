@@ -122,6 +122,7 @@ python tools\hardware_butler.py bench-runbook --root <project-root> --action bui
 
 | 文档 | 用途 |
 | --- | --- |
+| [docs/BEGINNER_GUIDE.md](docs/BEGINNER_GUIDE.md) | 5 分钟体验、真实项目第一轮命令和硬件前置安全底线。 |
 | [docs/START_HERE.md](docs/START_HERE.md) | 第一天怎么跑，适合新接触项目时阅读。 |
 | [docs/INSTALL.md](docs/INSTALL.md) | 源码工作区、editable install 和 embeddedskills runtime 选择。 |
 | [docs/ARCHITECTURE_MAP.md](docs/ARCHITECTURE_MAP.md) | 一页理解入口、证据层、计划层、执行后端和安全网络。 |

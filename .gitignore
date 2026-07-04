@@ -8,6 +8,8 @@ __pycache__/
 .hardware-butler/
 study_notes/
 docs/superpowers/plans/
+docs/inspections/
+docs/chip/
 
 # Root embeddedskills is maintained as an independent repository.
 /embeddedskills/

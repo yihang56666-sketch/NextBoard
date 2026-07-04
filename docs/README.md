@@ -6,6 +6,7 @@
 
 | 文档 | 适合什么时候看 |
 | --- | --- |
+| [BEGINNER_GUIDE.md](BEGINNER_GUIDE.md) | 完全第一次接触项目，想用 5 分钟跑通安全示例。 |
 | [START_HERE.md](START_HERE.md) | 第一天使用项目，想知道先跑什么。 |
 | [INSTALL.md](INSTALL.md) | 需要安装、editable CLI、embeddedskills runtime 路径说明。 |
 | [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) | 想快速理解入口、证据层、计划层、执行后端和安全网络。 |
@@ -57,10 +58,11 @@
 ## Recommended Reading Order
 
 1. [START_HERE.md](START_HERE.md)
-2. [INSTALL.md](INSTALL.md)
-3. [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md)
-4. [HARDWARE_UNDERSTANDING.md](HARDWARE_UNDERSTANDING.md)
-5. [COMMANDS.md](COMMANDS.md)
-6. [WORKBENCH_TUTORIAL.md](WORKBENCH_TUTORIAL.md) 或 [AUTO_WORKFLOW_GUI.md](AUTO_WORKFLOW_GUI.md)
-7. [CONFIGURATION.md](CONFIGURATION.md)
-8. 需要背景时再看 Reference 和历史报告
+2. [BEGINNER_GUIDE.md](BEGINNER_GUIDE.md)
+3. [INSTALL.md](INSTALL.md)
+4. [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md)
+5. [HARDWARE_UNDERSTANDING.md](HARDWARE_UNDERSTANDING.md)
+6. [COMMANDS.md](COMMANDS.md)
+7. [WORKBENCH_TUTORIAL.md](WORKBENCH_TUTORIAL.md) 或 [AUTO_WORKFLOW_GUI.md](AUTO_WORKFLOW_GUI.md)
+8. [CONFIGURATION.md](CONFIGURATION.md)
+9. 需要背景时再看 Reference 和历史报告
