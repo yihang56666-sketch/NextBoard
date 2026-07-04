@@ -18,11 +18,13 @@ from typing import Any
 TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
-EMBEDDED_DIR = TOOLS_DIR.parent / "embeddedskills"
+
+import runtime_context  # noqa: E402
+
+EMBEDDED_DIR = runtime_context.embeddedskills_root()
 if str(EMBEDDED_DIR) not in sys.path:
     sys.path.insert(0, str(EMBEDDED_DIR))
 
-import runtime_context  # noqa: E402
 import safe_io  # noqa: E402
 import safety_gate  # noqa: E402
 
@@ -363,7 +365,7 @@ def workflow_command(action: str, record: dict[str, Any], parent_token: str, chi
     backend = normalize_action(str(record.get("backend") or ""))
     argv = [
         sys.executable,
-        str(runtime_context.PACKAGE_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"),
+        str(runtime_context.embeddedskills_root() / "workflow" / "scripts" / "workflow_run.py"),
         workflow_action,
     ]
     if root:

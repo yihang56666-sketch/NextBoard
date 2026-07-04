@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -32,6 +33,7 @@ MANAGED_RUNTIME_ITEMS = {
     "embeddedskills",
     "nextboard",
     "pyproject.toml",
+    "requirements-all.txt",
     "requirements-dev.txt",
     "requirements.txt",
     "tests",
@@ -40,6 +42,12 @@ MANAGED_RUNTIME_ITEMS = {
 MANAGED_PLUGIN_SKILLS = {
     "chip-bringup",
 }
+ENV_EMBEDDEDSKILLS_ROOT = "HW_BUTLER_EMBEDDEDSKILLS_ROOT"
+EMBEDDEDSKILLS_REQUIRED_FILES = (
+    "safety_gate.py",
+    "safety_cli.py",
+    "workflow/scripts/workflow_run.py",
+)
 
 
 def should_ignore(path: Path) -> bool:
@@ -74,8 +82,11 @@ def copy_file(src: Path, dst: Path) -> None:
     shutil.copy2(src, dst)
 
 
-def clear_managed_runtime_payload() -> None:
+def clear_managed_runtime_payload(preserve: set[str] | None = None) -> None:
+    preserve = preserve or set()
     for name in MANAGED_RUNTIME_ITEMS:
+        if name in preserve:
+            continue
         target = RUNTIME_ROOT / name
         if target.is_dir():
             clear_runtime_directory(target)
@@ -108,14 +119,48 @@ def sync_project_skills() -> list[str]:
     return copied
 
 
+def embeddedskills_available(root: Path) -> bool:
+    """Return True when a directory has the minimum embeddedskills runtime."""
+    return all((root / rel).is_file() for rel in EMBEDDEDSKILLS_REQUIRED_FILES)
+
+
+def resolve_embeddedskills_source() -> tuple[Path, str]:
+    """Find the source used for the packaged embeddedskills runtime."""
+    if override := os.getenv(ENV_EMBEDDEDSKILLS_ROOT):
+        root = Path(override).expanduser().resolve()
+        if embeddedskills_available(root):
+            return root, "environment"
+
+    root_checkout = REPO_ROOT / "embeddedskills"
+    if embeddedskills_available(root_checkout):
+        return root_checkout, "workspace"
+
+    packaged_runtime = RUNTIME_ROOT / "embeddedskills"
+    if embeddedskills_available(packaged_runtime):
+        return packaged_runtime, "plugin-runtime"
+
+    raise FileNotFoundError(
+        "No embeddedskills runtime found. Provide a root embeddedskills/ checkout, "
+        f"set {ENV_EMBEDDEDSKILLS_ROOT}, or restore the packaged plugin mirror."
+    )
+
+
 def package_runtime() -> list[str]:
     copied: list[str] = []
     RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
-    clear_managed_runtime_payload()
+    embeddedskills_src, embeddedskills_source = resolve_embeddedskills_source()
+    preserve = {"embeddedskills"} if embeddedskills_src == RUNTIME_ROOT / "embeddedskills" else set()
+    clear_managed_runtime_payload(preserve=preserve)
 
-    for name in ("tools", "tests", "agents", ".codex", "embeddedskills", "nextboard"):
+    for name in ("tools", "tests", "agents", ".codex", "nextboard"):
         copy_tree(REPO_ROOT / name, RUNTIME_ROOT / name)
         copied.append(f"{name}/")
+
+    if "embeddedskills" in preserve:
+        copied.append(f"embeddedskills/ (preserved from {embeddedskills_source})")
+    else:
+        copy_tree(embeddedskills_src, RUNTIME_ROOT / "embeddedskills")
+        copied.append(f"embeddedskills/ (from {embeddedskills_source})")
 
     docs_dst = RUNTIME_ROOT / "docs"
     docs_dst.mkdir(parents=True, exist_ok=True)
@@ -123,7 +168,15 @@ def package_runtime() -> list[str]:
         copy_file(doc, docs_dst / doc.name)
         copied.append(f"docs/{doc.name}")
 
-    for name in ("README.md", "AGENTS.md", "pyproject.toml", "requirements.txt", "requirements-dev.txt", "conftest.py"):
+    for name in (
+        "README.md",
+        "AGENTS.md",
+        "pyproject.toml",
+        "requirements.txt",
+        "requirements-dev.txt",
+        "requirements-all.txt",
+        "conftest.py",
+    ):
         copy_file(REPO_ROOT / name, RUNTIME_ROOT / name)
         copied.append(name)
 

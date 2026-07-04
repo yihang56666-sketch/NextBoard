@@ -165,10 +165,17 @@ def allowlist_denial_reason(item: dict[str, Any]) -> str:
 def allowed_script_key(value: str) -> str:
     script_path = resolve_script_path(value)
     for key in ALLOWED_PYTHON_COMMANDS:
-        allowed_path = (runtime_context.PACKAGE_ROOT / key).resolve()
+        allowed_path = allowed_script_path(key)
         if os.path.normcase(str(script_path)) == os.path.normcase(str(allowed_path)):
             return key
     return normalize_script_path(value)
+
+
+def allowed_script_path(key: str) -> Path:
+    path = Path(key)
+    if path.parts and path.parts[0] == "embeddedskills":
+        return (Path(runtime_context.embeddedskills_root()) / Path(*path.parts[1:])).resolve()
+    return (Path(runtime_context.PACKAGE_ROOT) / path).resolve()
 
 
 def argv_schema_denial_reason(script: str, argv: list[Any]) -> str:
@@ -268,7 +275,10 @@ def canonical_argv(item: dict[str, Any]) -> list[str]:
 def resolve_script_path(value: str) -> Path:
     path = Path(value)
     if not path.is_absolute():
-        path = runtime_context.PACKAGE_ROOT / path
+        if path.parts and path.parts[0] == "embeddedskills":
+            path = Path(runtime_context.embeddedskills_root()) / Path(*path.parts[1:])
+        else:
+            path = Path(runtime_context.PACKAGE_ROOT) / path
     return path.resolve()
 
 
@@ -277,7 +287,11 @@ def normalize_script_path(value: str) -> str:
     try:
         path = script.relative_to(runtime_context.PACKAGE_ROOT)
     except ValueError:
-        path = script
+        embedded = Path(runtime_context.embeddedskills_root())
+        try:
+            return (Path("embeddedskills") / script.relative_to(embedded)).as_posix().lower()
+        except ValueError:
+            path = script
     return path.as_posix().lower()
 
 

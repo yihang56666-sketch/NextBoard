@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "luhao200"}
+    {name = "LeoKemp223"}
 ]
 keywords = ["embedded", "hardware", "stm32", "cubemx", "firmware"]
 classifiers = [
@@ -37,6 +37,8 @@ dev = [
 ui = [
     "rich>=13.0.0",
     "tqdm>=4.65.0",
+    "PyQt6>=6.6.0",
+    "qt-material>=2.17",
 ]
 cache = [
     "diskcache>=5.6.0",
@@ -59,6 +61,8 @@ reports = [
 all = [
     "rich>=13.0.0",
     "tqdm>=4.65.0",
+    "PyQt6>=6.6.0",
+    "qt-material>=2.17",
     "diskcache>=5.6.0",
     "pyocd>=0.36.0",
     "pylink-square>=1.2.0",
@@ -69,6 +73,7 @@ all = [
     "llama-index>=0.10.0",
     "pandas>=2.0.0",
     "matplotlib>=3.7.0",
+    "pytest-embedded>=1.5.0",
 ]
 
 [project.scripts]
@@ -76,12 +81,12 @@ hardware-butler = "tools.hardware_butler:main"
 butler = "tools.butler_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/luhao200/hardware-butler"
-Repository = "https://github.com/luhao200/hardware-butler"
-Issues = "https://github.com/luhao200/hardware-butler/issues"
+Homepage = "https://github.com/LeoKemp223/NextBoard"
+Repository = "https://github.com/LeoKemp223/NextBoard"
+Issues = "https://github.com/LeoKemp223/NextBoard/issues"
 
 [tool.setuptools.packages.find]
-include = ["tools*", "embeddedskills*", "nextboard*"]
+include = ["tools*", "nextboard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

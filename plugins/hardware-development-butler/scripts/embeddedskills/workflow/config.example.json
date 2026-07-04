@@ -1,0 +1,6 @@
+{
+  "preferred_build": "auto",
+  "preferred_flash": "disabled",
+  "preferred_debug": "disabled",
+  "preferred_observe": "disabled"
+}

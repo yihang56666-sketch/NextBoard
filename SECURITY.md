@@ -73,7 +73,7 @@ so the token cannot be self-minted by an automated caller. Until then, treat
 ## Reporting a vulnerability
 
 Please open a private security advisory on the repository, or contact the
-maintainer (`luhao200`) directly. Do not file public issues for undisclosed
+maintainer (`LeoKemp223`) directly. Do not file public issues for undisclosed
 vulnerabilities. We aim to acknowledge reports within a few days.
 
 When reporting, include:

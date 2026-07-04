@@ -1,0 +1,26 @@
+name: Hardware safety concern
+description: Report a suspected unsafe workflow or missing gate.
+title: "[Safety]: "
+labels: ["safety", "needs-triage"]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What command, backend, or UI flow could affect real hardware?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include command output, plan JSON, or screenshots without secrets.
+    validations:
+      required: true
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure
+      options:
+        - label: This is not an undisclosed vulnerability. I used SECURITY.md for private reports when needed.
+          required: true

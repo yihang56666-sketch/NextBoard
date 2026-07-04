@@ -8,10 +8,13 @@ import pytest
 # Add tools and embeddedskills to path
 REPO_ROOT = Path(__file__).parent
 TOOLS_DIR = REPO_ROOT / "tools"
-EMBEDDED_DIR = REPO_ROOT / "embeddedskills"
 
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
+
+import runtime_context  # noqa: E402
+
+EMBEDDED_DIR = runtime_context.embeddedskills_root()
 if str(EMBEDDED_DIR) not in sys.path:
     sys.path.insert(0, str(EMBEDDED_DIR))
 

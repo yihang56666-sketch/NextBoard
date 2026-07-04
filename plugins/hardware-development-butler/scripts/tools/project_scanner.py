@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import runtime_context
+import safe_io
+
 EXCLUDE_DIRS = {
     ".git",
     ".svn",
@@ -183,6 +186,11 @@ def render_markdown(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def write_output(path: Path, content: str) -> str:
+    written: str = safe_io.safe_write_text(path, content, allowed_roots=runtime_context.allowed_write_roots())
+    return written
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Scan a hardware development project")
     parser.add_argument("--root", default=".", help="Project root to scan")
@@ -195,8 +203,7 @@ def main() -> None:
     content = json.dumps(data, ensure_ascii=False, indent=2) if args.as_json and not args.markdown else render_markdown(data)
 
     if args.out:
-        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.out).write_text(content, encoding="utf-8")
+        write_output(Path(args.out), content)
     else:
         print(content)
 

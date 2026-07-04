@@ -5,12 +5,26 @@ __pycache__/
 # Local agent/client state
 **/.claude/settings.local.json
 .agents/.agents/reports/
+.hardware-butler/
+study_notes/
+docs/superpowers/plans/
 
-# embeddedskills is maintained as an independent repository.
-embeddedskills/
+# Root embeddedskills is maintained as an independent repository.
+/embeddedskills/
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Python virtual environments
+.venv/
+venv/
+env/
 
 .pytest_cache/
 .tmp-pytest/
+.tmp-pytest-*/
 .mypy_cache/
 .ruff_cache/
 plugins/hardware-development-butler/scripts/.ruff_cache/

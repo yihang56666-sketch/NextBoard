@@ -9,6 +9,7 @@ from pathlib import Path
 ENV_WORKSPACE_ROOT = "HARDWARE_BUTLER_WORKSPACE_ROOT"
 # New shorter environment variable
 ENV_BUTLER_ROOT = "HW_BUTLER_ROOT"
+ENV_EMBEDDEDSKILLS_ROOT = "HW_BUTLER_EMBEDDEDSKILLS_ROOT"
 
 TOOLS_DIR = Path(__file__).resolve().parent
 PACKAGE_ROOT = TOOLS_DIR.parent
@@ -44,6 +45,65 @@ def workspace_root(explicit: Path | None = None) -> Path:
     return PACKAGE_ROOT
 
 
+def embeddedskills_root(explicit: Path | None = None) -> Path:
+    """Return the embeddedskills runtime root.
+
+    A GitHub checkout may provide embeddedskills as a root-level sibling, an
+    explicit external checkout, or the packaged plugin runtime mirror. The
+    first two are best for development; the plugin mirror keeps packaged and
+    clean-clone workflows inspectable when the root checkout is intentionally
+    external.
+    """
+    if explicit:
+        return explicit.expanduser().resolve()
+
+    if override := os.getenv(ENV_EMBEDDEDSKILLS_ROOT):
+        return Path(override).expanduser().resolve()
+
+    for candidate in embeddedskills_candidates():
+        if embeddedskills_available(candidate):
+            return candidate.resolve()
+
+    return (PACKAGE_ROOT / "embeddedskills").resolve()
+
+
+def embeddedskills_candidates() -> list[Path]:
+    """Candidate locations for the embeddedskills runtime."""
+    return _dedupe_roots(
+        [
+            PACKAGE_ROOT / "embeddedskills",
+            PACKAGE_ROOT / "plugins" / "hardware-development-butler" / "scripts" / "embeddedskills",
+        ]
+    )
+
+
+def embeddedskills_available(root: Path) -> bool:
+    """Return True when a candidate has the minimum runtime files."""
+    return (
+        (root / "safety_gate.py").is_file()
+        and (root / "safety_cli.py").is_file()
+        and (root / "workflow" / "scripts" / "workflow_run.py").is_file()
+    )
+
+
+def embeddedskills_status(explicit: Path | None = None) -> dict[str, str | bool]:
+    """Machine-readable status for doctor output and onboarding docs."""
+    root = embeddedskills_root(explicit)
+    source = "missing"
+    if os.getenv(ENV_EMBEDDEDSKILLS_ROOT):
+        source = "environment"
+    elif root == (PACKAGE_ROOT / "embeddedskills").resolve():
+        source = "workspace"
+    elif root == (PACKAGE_ROOT / "plugins" / "hardware-development-butler" / "scripts" / "embeddedskills").resolve():
+        source = "plugin-runtime"
+    return {
+        "available": embeddedskills_available(root),
+        "path": str(root),
+        "source": source,
+        "env": ENV_EMBEDDEDSKILLS_ROOT,
+    }
+
+
 def allowed_write_roots(*extra_roots: Path) -> list[Path]:
     """Get list of allowed write roots.
 
@@ -54,6 +114,11 @@ def allowed_write_roots(*extra_roots: Path) -> list[Path]:
         Deduplicated list of allowed root paths
     """
     roots = [workspace_root(), *extra_roots]
+    return _dedupe_roots(roots)
+
+
+def _dedupe_roots(roots: list[Path]) -> list[Path]:
+    """Deduplicate paths while preserving order."""
     result: list[Path] = []
     seen: set[str] = set()
     for root in roots:

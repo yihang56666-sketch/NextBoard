@@ -25,6 +25,8 @@ import command_runner  # noqa: E402
 import config_proposal  # noqa: E402
 import cube_detect  # noqa: E402
 import cubemx_config_advisor  # noqa: E402
+import document_search_api  # noqa: E402
+import evidence_qa  # noqa: E402
 import firmware_code_patcher  # noqa: E402
 import firmware_intent_planner  # noqa: E402
 import hardware_action_audit  # noqa: E402
@@ -33,8 +35,11 @@ import hardware_action_plan  # noqa: E402
 import hardware_butler_inspect  # noqa: E402
 import manual_summarizer  # noqa: E402
 import product_doctor  # noqa: E402
+import project_brain  # noqa: E402
+import project_workflow  # noqa: E402
 import runtime_context  # noqa: E402
 import safe_io  # noqa: E402
+import task_workflows  # noqa: E402
 from logger import get_logger  # noqa: E402
 
 # Setup logging
@@ -59,8 +64,218 @@ def output(data: dict[str, Any], *, as_json: bool, markdown: str = "", out: str 
         print(content)
 
 
+def json_requested(argv: list[str]) -> bool:
+    return "--json" in argv
+
+
+def classify_cli_error(exc: BaseException) -> str:
+    message = str(exc)
+    if isinstance(exc, json.JSONDecodeError):
+        return "json-decode-error"
+    if "Refusing to write outside allowed roots" in message:
+        return "safe-write-denied"
+    if "Refusing to write through symlink path" in message:
+        return "safe-write-denied"
+    if isinstance(exc, OSError):
+        return "io-error"
+    return "validation-error"
+
+
+def cli_error_payload(exc: BaseException) -> dict[str, Any]:
+    code = classify_cli_error(exc)
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "status": "error",
+        "error": {
+            "code": code,
+            "message": str(exc),
+        },
+    }
+    if code == "safe-write-denied":
+        payload["error"]["hint"] = (
+            "Write outputs under the active workspace root, or set HW_BUTLER_ROOT "
+            "to the workspace you want this CLI invocation to manage."
+        )
+    return payload
+
+
+def format_cli_error(exc: BaseException, *, as_json: bool) -> str:
+    payload = cli_error_payload(exc)
+    if as_json:
+        return json.dumps(payload, ensure_ascii=False, indent=2)
+    error = payload["error"]
+    hint = error.get("hint")
+    lines = [f"ERROR [{error['code']}]: {error['message']}"]
+    if hint:
+        lines.append(f"Hint: {hint}")
+    return "\n".join(lines)
+
+
 def write_markdown(path: Path, content: str) -> str:
     return str(safe_io.safe_write_text(path, content, allowed_roots=runtime_context.allowed_write_roots()))
+
+
+def quickstart_guide(root: Path) -> dict[str, Any]:
+    root = root.resolve()
+    inspection_dir = runtime_context.default_inspection_dir(root)
+    root_text = str(root)
+
+    return {
+        "schema_version": 1,
+        "status": "ok",
+        "root": root_text,
+        "inspection_dir": str(inspection_dir),
+        "first_day_commands": [
+            guide_command(
+                "doctor",
+                "Check local readiness",
+                ["python", "tools\\hardware_butler.py", "doctor", "--root", root_text, "--json"],
+                "Verify Python, required files, optional tools, backend hints, and bench readiness.",
+            ),
+            guide_command(
+                "auto",
+                "Run the safe first pass",
+                [
+                    "python",
+                    "tools\\hardware_butler.py",
+                    "auto",
+                    "--root",
+                    root_text,
+                    "--out-dir",
+                    str(inspection_dir),
+                    "--json",
+                ],
+                "Generate reports and project-state.json without build, flash, debug, bus, or network actions.",
+            ),
+            guide_command(
+                "next-step",
+                "Ask for one safe recommendation",
+                ["python", "tools\\hardware_butler.py", "next-step", "--root", root_text, "--json"],
+                "Read the current project state and return the next safe command.",
+            ),
+            guide_command(
+                "workbench",
+                "Open the desktop workbench",
+                ["python", "gui\\hardware_agent_ui.py"],
+                "Use the GUI when you want a guided project selector and action list.",
+            ),
+        ],
+        "expected_outputs": [
+            {
+                "path": ".hardware-butler\\project-state.json",
+                "purpose": "workflow state and next recommended action",
+            },
+            {
+                "path": str(inspection_dir / "project-dossier.md"),
+                "purpose": "project overview",
+            },
+            {
+                "path": str(inspection_dir / "board-profile.md"),
+                "purpose": "board and MCU clues",
+            },
+            {
+                "path": str(inspection_dir / "firmware-profile.md"),
+                "purpose": "firmware structure clues",
+            },
+            {
+                "path": str(inspection_dir / "build-plan.md"),
+                "purpose": "safe build discovery plan",
+            },
+        ],
+        "safety_boundary": {
+            "safe_first_day_actions": [
+                "inspect files",
+                "generate reports",
+                "write local project state",
+                "recommend safe commands",
+            ],
+            "not_performed": [
+                "flash",
+                "erase",
+                "reset",
+                "debug control",
+                "bus transmit",
+                "network scan",
+                "hardware confirmation bypass",
+            ],
+        },
+        "docs": [
+            {"path": "docs/START_HERE.md", "purpose": "first-day GUI and CLI path"},
+            {"path": "docs/COMMANDS.md", "purpose": "command cookbook by workflow stage"},
+            {"path": "docs/README.md", "purpose": "documentation map"},
+            {"path": "docs/WORKBENCH_TUTORIAL.md", "purpose": "daily GUI tutorial"},
+            {"path": "README.md", "purpose": "workspace overview"},
+        ],
+        "next_success_state": [
+            "doctor returns without required errors",
+            "auto writes an inspection directory",
+            "next-step returns exactly one safe recommended action",
+            "you know whether the next action touches hardware",
+        ],
+    }
+
+
+def guide_command(command_id: str, title: str, argv: list[str], purpose: str) -> dict[str, Any]:
+    return {
+        "id": command_id,
+        "title": title,
+        "argv": argv,
+        "command": command_text(argv),
+        "purpose": purpose,
+        "safe_by_default": True,
+        "touches_hardware": False,
+    }
+
+
+def command_text(argv: list[str]) -> str:
+    return " ".join(quote_command_arg(item) for item in argv)
+
+
+def quote_command_arg(value: str) -> str:
+    if not value:
+        return '""'
+    if any(char.isspace() for char in value):
+        escaped = value.replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
+def render_guide_markdown(data: dict[str, Any]) -> str:
+    lines = [
+        "# Hardware Butler Start Guide",
+        "",
+        f"- Root: `{data['root']}`",
+        f"- Inspection directory: `{data['inspection_dir']}`",
+        "",
+        "## First Day Path",
+        "",
+        "| Step | Command | Why |",
+        "| --- | --- | --- |",
+    ]
+    for item in data["first_day_commands"]:
+        lines.append(f"| {item['title']} | `{item['command']}` | {item['purpose']} |")
+
+    lines.extend(["", "## Expected Outputs", "", "| Path | Purpose |", "| --- | --- |"])
+    for item in data["expected_outputs"]:
+        lines.append(f"| `{item['path']}` | {item['purpose']} |")
+
+    boundary = data["safety_boundary"]
+    lines.extend(["", "## Safety Boundary", ""])
+    lines.append("These first-day commands may:")
+    for item in boundary["safe_first_day_actions"]:
+        lines.append(f"- {item}")
+    lines.extend(["", "They do not:"])
+    for item in boundary["not_performed"]:
+        lines.append(f"- {item}")
+
+    lines.extend(["", "## Docs", "", "| Path | Purpose |", "| --- | --- |"])
+    for item in data["docs"]:
+        lines.append(f"| `{item['path']}` | {item['purpose']} |")
+
+    lines.extend(["", "## Good First Success", ""])
+    for item in data["next_success_state"]:
+        lines.append(f"- {item}")
+    return "\n".join(lines) + "\n"
 
 
 def onboard_project(root: Path, *, out_dir: Path, target: str = "", preset: str = "", config_name: str = "") -> dict[str, Any]:
@@ -200,10 +415,15 @@ def onboard_next_actions(config: dict[str, Any]) -> list[str]:
     ]
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     configure_stdio()
     parser = argparse.ArgumentParser(description="Hardware development butler CLI")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    guide_p = sub.add_parser("guide", help="Show the first-day start guide")
+    guide_p.add_argument("--root", default=".")
+    guide_p.add_argument("--json", action="store_true", dest="as_json")
+    guide_p.add_argument("--out", default="")
 
     inspect_p = sub.add_parser("inspect", help="Generate project dossier, board profile, and firmware profile")
     inspect_p.add_argument("--root", default=".")
@@ -248,6 +468,51 @@ def main() -> None:
     onboard_p.add_argument("--json", action="store_true", dest="as_json")
     onboard_p.add_argument("--out", default="")
 
+    auto_p = sub.add_parser("auto", help="Run safe automation and write project-state.json")
+    auto_p.add_argument("--root", default=".")
+    auto_p.add_argument("--out-dir", default="")
+    auto_p.add_argument("--target", default="")
+    auto_p.add_argument("--preset", default="")
+    auto_p.add_argument("--config-name", default="")
+    auto_p.add_argument("--json", action="store_true", dest="as_json")
+    auto_p.add_argument("--out", default="")
+
+    next_p = sub.add_parser("next-step", help="Show the next safe recommended action")
+    next_p.add_argument("--root", default=".")
+    next_p.add_argument("--json", action="store_true", dest="as_json")
+    next_p.add_argument("--out", default="")
+
+    workbench_p = sub.add_parser("workbench", help="Show the connected project workbench model for CLI and UI")
+    workbench_p.add_argument("--root", default=".")
+    workbench_p.add_argument("--out-dir", default="")
+    workbench_p.add_argument("--json", action="store_true", dest="as_json")
+    workbench_p.add_argument("--out", default="")
+
+    brain_p = sub.add_parser("brain", help="Build the hardware project brain with evidence health and risks")
+    brain_p.add_argument("--root", default=".")
+    brain_p.add_argument("--json", action="store_true", dest="as_json")
+    brain_p.add_argument("--out", default="")
+    brain_p.add_argument("--no-write", action="store_true")
+
+    ask_p = sub.add_parser("ask", help="Answer a project question from local indexed evidence")
+    ask_p.add_argument("--root", default=".")
+    ask_p.add_argument("--question", required=True)
+    ask_p.add_argument("--json", action="store_true", dest="as_json")
+    ask_p.add_argument("--out", default="")
+    ask_p.add_argument("--no-refresh", action="store_true")
+
+    task_p = sub.add_parser("task", help="Expand an intent into safe hardware-copilot workflow commands")
+    task_p.add_argument("--root", default=".")
+    task_p.add_argument("--intent", required=True, choices=sorted(task_workflows.INTENTS))
+    task_p.add_argument("--part", default="")
+    task_p.add_argument("--pin", default="")
+    task_p.add_argument("--function", default="")
+    task_p.add_argument("--instance", default="")
+    task_p.add_argument("--log", default="")
+    task_p.add_argument("--question", default="")
+    task_p.add_argument("--json", action="store_true", dest="as_json")
+    task_p.add_argument("--out", default="")
+
     cap_p = sub.add_parser("capabilities", help="Show product capability matrix")
     cap_p.add_argument("--json", action="store_true", dest="as_json")
     cap_p.add_argument("--out", default="")
@@ -273,6 +538,11 @@ def main() -> None:
     chip_p.add_argument("--source", action="append", default=[])
     chip_p.add_argument("--search", action="store_true")
     chip_p.add_argument("--search-source", action="append", default=[], help="Omit with --search to use built-in vendor hints")
+    chip_p.add_argument("--api-search", action="store_true", help="Use configured search APIs such as Exa or DOC_SEARCH_API_URL")
+    chip_p.add_argument("--api-provider", action="append", default=[], choices=["exa", "generic"])
+    chip_p.add_argument("--api-preset", default=document_search_api.DEFAULT_PRESET, choices=sorted(document_search_api.SEARCH_PRESETS))
+    chip_p.add_argument("--api-query", default="")
+    chip_p.add_argument("--api-max-results", type=int, default=8)
     chip_p.add_argument("--download", action="store_true")
     chip_p.add_argument("--no-extract", action="store_true")
     chip_p.add_argument("--out-dir", default="")
@@ -380,9 +650,12 @@ def main() -> None:
     summary_p.add_argument("--json", action="store_true", dest="as_json")
     summary_p.add_argument("--out", default="")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    if args.command == "inspect":
+    if args.command == "guide":
+        data = quickstart_guide(Path(args.root))
+        output(data, as_json=args.as_json, markdown=render_guide_markdown(data), out=args.out)
+    elif args.command == "inspect":
         root = Path(args.root)
         out_dir = Path(args.out_dir) if args.out_dir else root / "docs"
         safe_io.validate_write_path(out_dir, allowed_roots=runtime_context.allowed_write_roots())
@@ -429,6 +702,61 @@ def main() -> None:
             config_name=args.config_name,
         )
         output(data, as_json=args.as_json, out=args.out)
+    elif args.command == "auto":
+        root = Path(args.root)
+        auto_out_dir = Path(args.out_dir) if args.out_dir else None
+
+        def runner(project_root: Path, reports_dir: Path) -> dict[str, Any]:
+            safe_io.validate_write_path(reports_dir, allowed_roots=runtime_context.allowed_write_roots())
+            return onboard_project(
+                project_root,
+                out_dir=reports_dir,
+                target=args.target,
+                preset=args.preset,
+                config_name=args.config_name,
+            )
+
+        data = project_workflow.run_auto(root, out_dir=auto_out_dir, onboard_runner=runner)
+        output(data, as_json=args.as_json, out=args.out)
+    elif args.command == "next-step":
+        root = Path(args.root)
+        state = project_workflow.collect_project_state(root)
+        state_path = project_workflow.write_project_state(root, state)
+        data = {
+            "schema_version": 1,
+            "status": state["status"],
+            "root": state["root"],
+            "state_path": str(state_path),
+            "state": state,
+            "next_step": state["next_step"],
+            "phases": state["phases"],
+        }
+        output(data, as_json=args.as_json, out=args.out)
+    elif args.command == "workbench":
+        root = Path(args.root)
+        reports_dir = Path(args.out_dir) if args.out_dir else None
+        data = project_workflow.build_workbench(root, reports_dir=reports_dir)
+        state_path = project_workflow.write_project_state(root, data["state"])
+        data["state_path"] = str(state_path)
+        output(data, as_json=args.as_json, out=args.out)
+    elif args.command == "brain":
+        data = project_brain.build_project_brain(Path(args.root), write=not args.no_write)
+        output(data, as_json=args.as_json, markdown=project_brain.render_markdown(data), out=args.out)
+    elif args.command == "ask":
+        data = evidence_qa.answer_question(Path(args.root), args.question, refresh=not args.no_refresh)
+        output(data, as_json=args.as_json, markdown=evidence_qa.render_markdown(data), out=args.out)
+    elif args.command == "task":
+        data = task_workflows.build_task_plan(
+            Path(args.root),
+            args.intent,
+            part=args.part,
+            pin=args.pin,
+            function=args.function,
+            instance=args.instance,
+            log=args.log,
+            question=args.question,
+        )
+        output(data, as_json=args.as_json, markdown=task_workflows.render_markdown(data), out=args.out)
     elif args.command == "capabilities":
         data = product_doctor.capabilities()
         output(data, as_json=args.as_json, markdown=product_doctor.render_capabilities_markdown(data), out=args.out)
@@ -449,12 +777,17 @@ def main() -> None:
     elif args.command == "chip-dossier":
         part = chip_dossier.normalize_part(args.part)
         out_dir = Path(args.out_dir) if args.out_dir else runtime_context.workspace_root() / "docs" / "chip" / part
-        if args.search:
+        if args.search or args.api_search:
             data = chip_dossier.search_and_download_documents(
                 part,
                 out_dir,
                 board=args.board,
                 search_sources=args.search_source or args.source,
+                api_search=args.api_search,
+                api_providers=args.api_provider,
+                api_preset=args.api_preset,
+                api_query=args.api_query,
+                api_max_results=args.api_max_results,
             )
         elif args.download:
             data = chip_dossier.download_documents(
@@ -569,6 +902,16 @@ def main() -> None:
         data = manual_summarizer.summarize_documents(args.part, [Path(item) for item in args.document])
         output(data, as_json=args.as_json, markdown=manual_summarizer.render_markdown(data), out=args.out)
 
+def cli_entry(argv: list[str] | None = None) -> int:
+    configure_stdio()
+    effective_argv = sys.argv[1:] if argv is None else argv
+    try:
+        main(effective_argv)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(format_cli_error(exc, as_json=json_requested(effective_argv)), file=sys.stderr)
+        return 2
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(cli_entry())

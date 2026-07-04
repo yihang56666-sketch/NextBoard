@@ -38,6 +38,7 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import document_providers  # noqa: E402
+import document_search_api  # noqa: E402
 import manual_summarizer  # noqa: E402
 import runtime_context  # noqa: E402
 import safe_io  # noqa: E402
@@ -233,10 +234,31 @@ def search_and_download_documents(
     search_sources: list[str],
     board: str = "",
     timeout_s: int = 20,
+    api_search: bool = False,
+    api_providers: list[str] | None = None,
+    api_preset: str = document_search_api.DEFAULT_PRESET,
+    api_query: str = "",
+    api_max_results: int = 8,
 ) -> dict[str, Any]:
-    effective_search_sources = search_sources or vendor_search_hints(part)
+    api_result: dict[str, Any] | None = None
+    api_sources: list[str] = []
+    if api_search:
+        api_result = document_search_api.search_documents(
+            part,
+            providers=api_providers or None,
+            preset=api_preset,
+            query_extra=api_query,
+            max_results=api_max_results,
+            timeout_s=timeout_s,
+        )
+        api_sources = [item for item in api_result.get("urls", []) if isinstance(item, str)]
+    effective_search_sources = merge_unique([*search_sources, *api_sources])
+    if not effective_search_sources:
+        effective_search_sources = vendor_search_hints(part)
     discovered = discover_sources(part, effective_search_sources, timeout_s=timeout_s)
     discovered["auto_search"] = not bool(search_sources)
+    if api_result is not None:
+        discovered["api_search"] = api_result
     sources = [item["url"] for item in discovered["documents"]]
     if not sources:
         dossier = create_dossier(part, out_dir, board=board, sources=[])
@@ -264,6 +286,18 @@ def search_and_download_documents(
     dossier = download_documents(part, out_dir, board=board, sources=sources, timeout_s=timeout_s, extract_text=True)
     dossier["search"] = discovered
     return dossier
+
+
+def merge_unique(items: list[str]) -> list[str]:
+    result = []
+    seen = set()
+    for item in items:
+        key = item.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
 
 
 def write_downloaded_manual_summary(dossier: dict[str, Any], out_dir: Path) -> None:
@@ -707,6 +741,11 @@ def main() -> None:
     parser.add_argument("--source", action="append", default=[])
     parser.add_argument("--search", action="store_true", help="Discover PDF links from search-source pages or built-in vendor hints before downloading")
     parser.add_argument("--search-source", action="append", default=[], help="HTML page, index file, or PDF URL to search; omit to use built-in vendor hints")
+    parser.add_argument("--api-search", action="store_true", help="Use configured search APIs such as Exa or DOC_SEARCH_API_URL")
+    parser.add_argument("--api-provider", action="append", default=[], choices=["exa", "generic"], help="Limit API search to a provider")
+    parser.add_argument("--api-preset", default=document_search_api.DEFAULT_PRESET, choices=sorted(document_search_api.SEARCH_PRESETS))
+    parser.add_argument("--api-query", default="", help="Extra search terms, such as board name or schematic")
+    parser.add_argument("--api-max-results", type=int, default=8)
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--no-extract", action="store_true", help="Do not extract PDF text or rewrite manual-summary.md")
     parser.add_argument("--json", action="store_true", dest="as_json")
@@ -714,8 +753,18 @@ def main() -> None:
 
     part = normalize_part(args.part)
     out_dir = Path(args.out_dir) if args.out_dir else runtime_context.workspace_root() / "docs" / "chip" / part
-    if args.search:
-        data = search_and_download_documents(part, out_dir, board=args.board, search_sources=args.search_source or args.source)
+    if args.search or args.api_search:
+        data = search_and_download_documents(
+            part,
+            out_dir,
+            board=args.board,
+            search_sources=args.search_source or args.source,
+            api_search=args.api_search,
+            api_providers=args.api_provider,
+            api_preset=args.api_preset,
+            api_query=args.api_query,
+            api_max_results=args.api_max_results,
+        )
     elif args.download:
         data = download_documents(part, out_dir, board=args.board, sources=args.source, extract_text=not args.no_extract)
     else:

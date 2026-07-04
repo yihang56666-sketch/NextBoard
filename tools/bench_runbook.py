@@ -227,7 +227,7 @@ def execute_workflow_dry_run(root: Path, argv: list[str], *, preflight: dict[str
 
 
 def argv_uses_trusted_workflow_run(argv: list[str]) -> bool:
-    trusted = (runtime_context.PACKAGE_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py").resolve()
+    trusted = (runtime_context.embeddedskills_root() / "workflow" / "scripts" / "workflow_run.py").resolve()
     if len(argv) < 2:
         return False
     script = Path(str(argv[1]))

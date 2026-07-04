@@ -22,6 +22,7 @@ import config_proposal  # noqa: E402
 import cube_detect  # noqa: E402
 import cubemx_config_advisor  # noqa: E402
 import document_providers  # noqa: E402
+import document_search_api  # noqa: E402
 import firmware_code_patcher  # noqa: E402
 import firmware_intent_planner  # noqa: E402
 import hardware_action_audit  # noqa: E402
@@ -30,10 +31,12 @@ import hardware_action_plan  # noqa: E402
 import hardware_butler  # noqa: E402
 import manual_summarizer  # noqa: E402
 import product_doctor  # noqa: E402
+import project_workflow  # noqa: E402
 import runtime_context  # noqa: E402
 import safe_io  # noqa: E402
+import task_workflows  # noqa: E402
 
-EMBEDDED_DIR = REPO_ROOT / "embeddedskills"
+EMBEDDED_DIR = runtime_context.embeddedskills_root()
 if str(EMBEDDED_DIR) not in sys.path:
     sys.path.insert(0, str(EMBEDDED_DIR))
 import safety_gate  # noqa: E402
@@ -41,6 +44,13 @@ import safety_gate  # noqa: E402
 os.environ.setdefault(runtime_context.ENV_WORKSPACE_ROOT, str(REPO_ROOT))
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "cubemx-basic"
 TEST_TMP = REPO_ROOT / "tests" / "tmp" / "hardware-butler"
+
+
+def repo_path(rel: str) -> Path:
+    path = Path(rel)
+    if path.parts and path.parts[0] == "embeddedskills":
+        return EMBEDDED_DIR.joinpath(*path.parts[1:])
+    return REPO_ROOT / path
 
 
 def require(condition: bool, message: str) -> None:
@@ -160,6 +170,48 @@ def test_chip_dossier_auto_search_uses_provider_hints_when_sources_missing() -> 
     require(dossier["search"]["auto_search"], "empty search sources should use provider hints")
     require(dossier["search"]["search_sources"] == [index.as_uri()], "auto search should record effective provider hint sources")
     require(dossier["download_results"][0]["status"] == "downloaded", "auto search should download discovered PDF")
+    cleanup_dir(out_dir)
+    cleanup_dir(index_dir)
+
+
+def test_document_search_api_presets_and_missing_provider_status() -> None:
+    risk_query = document_search_api.build_query("STM32F407VGTx", preset="part-risk")
+    result = document_search_api.search_documents("STM32F407VGTx", providers=["exa"], env={})
+    require("lifecycle" in risk_query, "part-risk preset should add lifecycle terms")
+    require(result["status"] == "api-not-configured", "explicit provider without key should report api-not-configured")
+    require(result["providers"][0]["status"] == "api-not-configured", "provider result should preserve config status")
+
+
+def test_chip_dossier_api_search_falls_back_to_vendor_hints() -> None:
+    index_dir = TEST_TMP / "api-search-fallback-index"
+    index_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = index_dir / "STM32F407VGTx-datasheet.pdf"
+    shutil.copy2(REPO_ROOT / "tests" / "fixtures" / "docs" / "sample-datasheet.pdf", pdf_path)
+    index = index_dir / "index.html"
+    index.write_text(f'<html><a href="{pdf_path.resolve().as_uri()}">STM32F407VGTx datasheet</a></html>', encoding="utf-8")
+    out_dir = TEST_TMP / "chip" / "STM32F407VGTx-api-search-fallback-test"
+    original_hints = chip_dossier.vendor_search_hints
+    original_search = chip_dossier.document_search_api.search_documents
+    chip_dossier.vendor_search_hints = lambda part: [index.as_uri()]
+    chip_dossier.document_search_api.search_documents = lambda *args, **kwargs: {
+        "schema_version": 1,
+        "status": "api-not-configured",
+        "urls": [],
+        "providers": [],
+    }
+    try:
+        dossier = chip_dossier.search_and_download_documents(
+            part="STM32F407VGTx",
+            out_dir=out_dir,
+            search_sources=[],
+            api_search=True,
+        )
+    finally:
+        chip_dossier.vendor_search_hints = original_hints
+        chip_dossier.document_search_api.search_documents = original_search
+    require(dossier["search"]["api_search"]["status"] == "api-not-configured", "API search status should be recorded")
+    require(dossier["search"]["search_sources"] == [index.as_uri()], "empty API results should fall back to vendor hints")
+    require(dossier["download_results"][0]["status"] == "downloaded", "fallback PDF should be downloaded")
     cleanup_dir(out_dir)
     cleanup_dir(index_dir)
 
@@ -950,7 +1002,7 @@ def test_bench_runbook_refuses_unsafe_workflow_dry_run_subprocess() -> None:
     embedded = project / ".embeddedskills"
     result = bench_runbook.execute_workflow_dry_run(
         project,
-        [sys.executable, str(REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"), "build-flash", "--json"],
+        [sys.executable, str(EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"), "build-flash", "--json"],
     )
     require(result["status"] == "blocked-workflow-dry-run-unsafe", "runbook should refuse workflow subprocess without --dry-run")
     require(not result["executed"], "unsafe workflow dry-run should not start subprocess")
@@ -960,7 +1012,7 @@ def test_bench_runbook_refuses_unsafe_workflow_dry_run_subprocess() -> None:
 def test_bench_runbook_refuses_missing_json_and_untrusted_workflow_argv() -> None:
     project = copy_fixture_project("bench-runbook-untrusted-dry-run")
     embedded = project / ".embeddedskills"
-    trusted = REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"
+    trusted = EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"
     original_run = bench_runbook.subprocess.run
 
     def fail_if_called(*args, **kwargs):
@@ -993,7 +1045,7 @@ def test_bench_runbook_refuses_missing_json_and_untrusted_workflow_argv() -> Non
 
 def test_bench_runbook_preflight_failure_blocks_workflow_subprocess() -> None:
     project = copy_fixture_project("bench-runbook-preflight-block")
-    trusted = REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"
+    trusted = EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"
     original_run = bench_runbook.subprocess.run
 
     def fail_if_called(*args, **kwargs):
@@ -1014,7 +1066,7 @@ def test_bench_runbook_preflight_failure_blocks_workflow_subprocess() -> None:
 
 def test_bench_runbook_rejects_invalid_json_or_missing_dry_run_controls() -> None:
     project = copy_fixture_project("bench-runbook-invalid-json")
-    trusted = REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"
+    trusted = EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"
     argv = [sys.executable, str(trusted), "build-flash", "--dry-run", "--json"]
     original_run = bench_runbook.subprocess.run
 
@@ -1059,7 +1111,7 @@ def test_bench_runbook_rejects_invalid_json_or_missing_dry_run_controls() -> Non
 
 def test_bench_runbook_sanitizes_nested_stdout_stderr_and_argv() -> None:
     project = copy_fixture_project("bench-runbook-sanitize-nested")
-    trusted = REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"
+    trusted = EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"
     argv = [sys.executable, str(trusted), "build-flash", "--dry-run", "--json"]
     payload = {
         "status": "error",
@@ -1566,7 +1618,7 @@ def test_high_risk_scripts_have_safety_gate() -> None:
         "embeddedskills/workflow/scripts/workflow_run.py",
     ]
     for rel in scripts:
-        text = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+        text = repo_path(rel).read_text(encoding="utf-8", errors="replace")
         require("safety_cli" in text or "safety_gate.check_token" in text, f"missing safety gate in {rel}")
     for rel in (
         "embeddedskills/jlink/scripts/jlink_exec.py",
@@ -1577,12 +1629,12 @@ def test_high_risk_scripts_have_safety_gate() -> None:
         "embeddedskills/net/scripts/net_scan.py",
         "embeddedskills/workflow/scripts/workflow_run.py",
     ):
-        text = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+        text = repo_path(rel).read_text(encoding="utf-8", errors="replace")
         require("consume=True" in text, f"direct safety_gate call should consume token in {rel}")
 
 
 def test_workflow_child_token_and_artifact_hash_contract() -> None:
-    workflow = (REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py").read_text(encoding="utf-8", errors="replace")
+    workflow = (EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py").read_text(encoding="utf-8", errors="replace")
     require("--child-confirm-token" in workflow, "workflow should accept a child hardware token")
     require("--dry-run" in workflow, "workflow should accept dry-run command preparation")
     require("gate_action and not args.dry_run" in workflow, "workflow dry-run must not consume parent hardware token")
@@ -1602,7 +1654,7 @@ def test_workflow_child_token_and_artifact_hash_contract() -> None:
         "embeddedskills/openocd/scripts/openocd_semihosting.py",
         "embeddedskills/probe-rs/scripts/probe_rs_rtt.py",
     ):
-        script = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+        script = repo_path(rel).read_text(encoding="utf-8", errors="replace")
         require("artifact_hash=args.artifact_hash" in script, f"script should bind artifact hash: {rel}")
         require("workspace=args.workspace" in script, f"script should consume token in target workspace: {rel}")
 
@@ -1998,7 +2050,7 @@ def test_product_doctor_commands() -> None:
     os.environ[runtime_context.ENV_WORKSPACE_ROOT] = str(workspace)
     caps = product_doctor.capabilities()
     commands = {item["command"] for item in caps["capabilities"]}
-    require({"onboard", "doctor", "status", "safety-audit", "bench-runbook", "bench-preflight", "workflow-dry-run", "patch-ioc", "firmware-integrate", "build-flash-sim", "build-debug-sim", "observe-sim"}.issubset(commands), "product commands missing from capability matrix")
+    require({"onboard", "auto", "next-step", "workbench", "brain", "ask", "task", "doctor", "status", "safety-audit", "bench-runbook", "bench-preflight", "workflow-dry-run", "patch-ioc", "firmware-integrate", "build-flash-sim", "build-debug-sim", "observe-sim"}.issubset(commands), "product commands missing from capability matrix")
     try:
         doctor = product_doctor.doctor(project)
         require(doctor["summary"]["error"] == 0, "doctor should not report errors for fixture")
@@ -2017,6 +2069,35 @@ def test_product_doctor_commands() -> None:
             os.environ.pop(runtime_context.ENV_WORKSPACE_ROOT, None)
         else:
             os.environ[runtime_context.ENV_WORKSPACE_ROOT] = previous
+
+
+def test_project_workflow_state_and_next_step() -> None:
+    project = copy_fixture_project("workflow-state")
+    state = project_workflow.collect_project_state(project)
+    require(state["schema_version"] == 1, "workflow state should return schema")
+    require(state["backend"].get("backend") == "keil", "workflow should expose detected backend")
+    require(state["next_step"]["safe_by_default"], "next step must be safe by default")
+    require(not state["next_step"]["touches_hardware"], "next step must not touch hardware")
+    workbench = project_workflow.build_workbench(project)
+    require(workbench["app"] == "hardware-butler-workbench", "workbench should identify connected app model")
+    require(workbench["primary_action"]["id"] == workbench["state"]["next_step"]["id"], "workbench primary action should mirror next step")
+    require(workbench["actions"][0]["id"] == "refresh", "workbench should start with refresh action")
+    require(workbench["reports"], "workbench should expose report summaries")
+    path = project_workflow.write_project_state(project, state)
+    require(path.exists(), "project workflow state should be persisted")
+
+
+def test_task_workflows_are_safe_and_intent_based() -> None:
+    configure = task_workflows.build_task_plan(FIXTURE, "configure-peripheral", function="i2c", instance="I2C1")
+    require(configure["status"] == "ready", "bus peripheral intent should accept instance input")
+    require(configure["missing_inputs"] == [], "configured bus peripheral should not require extra input")
+    require([item["id"] for item in configure["steps"]] == ["brain", "firmware-plan"], "I2C instance plan should refresh brain and plan firmware")
+    collect = task_workflows.build_task_plan(FIXTURE, "collect-evidence", part="STM32F407VGTx")
+    chip_step = [item for item in collect["steps"] if item["id"] == "chip-dossier"][0]
+    require("--api-preset" in chip_step["argv"] and "chip-docs" in chip_step["argv"], "collect evidence should use chip-docs preset")
+    bringup = task_workflows.build_task_plan(FIXTURE, "prepare-bringup")
+    require(bringup["safety"]["real_hardware_actions"] == "planned-gated", "bring-up should stay planned-gated")
+    require(all(item["safe_by_default"] and not item["touches_hardware"] for item in bringup["steps"]), "task steps must be safe local commands")
 
 
 def test_product_doctor_bench_readiness_with_artifacts() -> None:
@@ -2158,7 +2239,7 @@ def json_text(data: dict) -> str:
 def run_workflow_json(args: list[str], *, cwd: Path) -> dict:
     cmd = [
         sys.executable,
-        str(REPO_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"),
+        str(EMBEDDED_DIR / "workflow" / "scripts" / "workflow_run.py"),
         *args,
     ]
     proc = subprocess.run(
@@ -2236,6 +2317,8 @@ def main() -> None:
         test_chip_dossier_download_accepts_only_pdf,
         test_chip_dossier_search_download_extracts_summary,
         test_chip_dossier_auto_search_uses_provider_hints_when_sources_missing,
+        test_document_search_api_presets_and_missing_provider_status,
+        test_chip_dossier_api_search_falls_back_to_vendor_hints,
         test_cubemx_pin_advisor_gpio,
         test_cubemx_pin_advisor_missing_pin,
         test_cubemx_pin_advisor_package_evidence_verified,
@@ -2308,6 +2391,8 @@ def main() -> None:
         test_config_write_requires_ready_status,
         test_config_merge_preserves_hardware_preferences,
         test_product_doctor_commands,
+        test_project_workflow_state_and_next_step,
+        test_task_workflows_are_safe_and_intent_based,
         test_product_doctor_bench_readiness_with_artifacts,
         test_hardware_butler_cli_bench_runbook_help_smoke,
         test_safe_write_rejects_workspace_escape,

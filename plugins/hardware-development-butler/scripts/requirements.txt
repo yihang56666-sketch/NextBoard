@@ -1,27 +1,9 @@
-# Core dependencies (stdlib only before, now with integrations)
+# Minimal runtime dependencies for the source workspace.
+#
+# Optional integrations live in pyproject extras:
+#   pip install -e ".[ui]"
+#   pip install -e ".[hardware]"
+#   pip install -e ".[ai]"
+#   pip install -e ".[all]"
 
-# ===== Hardware Backends =====
-pyocd>=0.36.0          # PyOCD for J-Link, ST-Link, CMSIS-DAP
-pylink-square>=1.2.0   # J-Link Python bindings
-pyserial>=3.5          # Serial communication
-
-# ===== AI/RAG =====
-langchain>=0.1.0       # LLM application framework
-langchain-anthropic>=0.1.0  # Anthropic integration
-llama-index>=0.10.0    # RAG and document indexing
-
-# ===== Testing =====
-pytest>=7.4.0          # Testing framework
-pytest-embedded>=1.5.0 # Embedded hardware testing (optional)
-
-# ===== Data Processing =====
-pandas>=2.0.0          # Data analysis
-matplotlib>=3.7.0      # Plotting and visualization
-
-# ===== Optional: Build System =====
-# platformio>=6.1.0    # Unified build system (uncomment if needed)
-
-# ===== Optional: PCB/Schematic =====
-# cmsis-svd-parser>=0.4.0  # CMSIS-SVD parsing (uncomment if needed)
-
-# Development dependencies moved to requirements-dev.txt
+pyserial>=3.5

@@ -49,6 +49,9 @@ def validate_skill() -> None:
     usage = (SKILL_ROOT / "references" / "usage.md").read_text(encoding="utf-8")
     for command in (
         "chip-dossier",
+        "brain",
+        "ask",
+        "task",
         "summarize-manual",
         "advise-pin",
         "patch-ioc",
@@ -86,13 +89,21 @@ def validate_runtime() -> None:
         "scripts/pyproject.toml",
         "scripts/requirements.txt",
         "scripts/requirements-dev.txt",
+        "scripts/requirements-all.txt",
         "scripts/conftest.py",
         "scripts/tools/runtime_context.py",
         "scripts/tools/command_runner.py",
+        "scripts/tools/project_workflow.py",
+        "scripts/tools/project_brain.py",
+        "scripts/tools/evidence_index.py",
+        "scripts/tools/evidence_qa.py",
+        "scripts/tools/hardware_risk.py",
+        "scripts/tools/task_workflows.py",
         "scripts/tools/build_plan.py",
         "scripts/tools/bench_runbook.py",
         "scripts/tools/product_doctor.py",
         "scripts/tools/chip_dossier.py",
+        "scripts/tools/document_search_api.py",
         "scripts/tools/document_providers.py",
         "scripts/tools/pin_capabilities.py",
         "scripts/tools/cubemx_config_advisor.py",
@@ -109,6 +120,11 @@ def validate_runtime() -> None:
         "scripts/embeddedskills/safety_cli.py",
         "scripts/nextboard/README.md",
         "scripts/tests/validate_hardware_butler.py",
+        "scripts/tests/unit/test_chip_dossier_api_search.py",
+        "scripts/tests/unit/test_document_search_api.py",
+        "scripts/tests/unit/test_task_workflows.py",
+        "scripts/tests/unit/test_hardware_butler_cli_errors.py",
+        "scripts/tests/unit/test_project_workflow.py",
         "scripts/tests/unit/test_langchain_agent_gate.py",
         "scripts/.codex/config.toml",
         "skills/chip-bringup/SKILL.md",
@@ -171,14 +187,10 @@ def is_inaccessible_pytest_tmp(path: Path) -> bool:
     if path.name != ".tmp-pytest":
         return False
     try:
-        path.relative_to(PLUGIN_ROOT / "scripts" / "tests")
+        path.relative_to(PLUGIN_ROOT / "scripts")
     except ValueError:
         return False
-    try:
-        list(path.iterdir())
-    except PermissionError:
-        return True
-    return False
+    return True
 
 
 def validate_source_sync() -> None:
@@ -188,16 +200,33 @@ def validate_source_sync() -> None:
         ("tools/hardware_action_executor.py", "scripts/tools/hardware_action_executor.py"),
         ("tools/hardware_action_audit.py", "scripts/tools/hardware_action_audit.py"),
         ("tools/bench_runbook.py", "scripts/tools/bench_runbook.py"),
+        ("tools/project_workflow.py", "scripts/tools/project_workflow.py"),
+        ("tools/project_brain.py", "scripts/tools/project_brain.py"),
+        ("tools/evidence_index.py", "scripts/tools/evidence_index.py"),
+        ("tools/evidence_qa.py", "scripts/tools/evidence_qa.py"),
+        ("tools/hardware_risk.py", "scripts/tools/hardware_risk.py"),
+        ("tools/task_workflows.py", "scripts/tools/task_workflows.py"),
         ("tools/product_doctor.py", "scripts/tools/product_doctor.py"),
+        ("tools/document_search_api.py", "scripts/tools/document_search_api.py"),
         ("tools/pin_capabilities.py", "scripts/tools/pin_capabilities.py"),
         ("tools/backends/langchain_agent.py", "scripts/tools/backends/langchain_agent.py"),
+        ("tests/validate_hardware_butler.py", "scripts/tests/validate_hardware_butler.py"),
+        ("tests/unit/test_chip_dossier_api_search.py", "scripts/tests/unit/test_chip_dossier_api_search.py"),
+        ("tests/unit/test_document_search_api.py", "scripts/tests/unit/test_document_search_api.py"),
+        ("tests/unit/test_task_workflows.py", "scripts/tests/unit/test_task_workflows.py"),
+        ("tests/unit/test_hardware_butler_cli_errors.py", "scripts/tests/unit/test_hardware_butler_cli_errors.py"),
+        ("tests/unit/test_project_workflow.py", "scripts/tests/unit/test_project_workflow.py"),
+        ("tests/unit/test_langchain_agent_gate.py", "scripts/tests/unit/test_langchain_agent_gate.py"),
+        ("pyproject.toml", "scripts/pyproject.toml"),
+        ("requirements.txt", "scripts/requirements.txt"),
+        ("requirements-dev.txt", "scripts/requirements-dev.txt"),
+        ("requirements-all.txt", "scripts/requirements-all.txt"),
+        ("conftest.py", "scripts/conftest.py"),
+    ]
+    optional_source_pairs = [
         ("embeddedskills/workflow/scripts/workflow_run.py", "scripts/embeddedskills/workflow/scripts/workflow_run.py"),
         ("embeddedskills/safety_gate.py", "scripts/embeddedskills/safety_gate.py"),
         ("embeddedskills/safety_cli.py", "scripts/embeddedskills/safety_cli.py"),
-        ("tests/validate_hardware_butler.py", "scripts/tests/validate_hardware_butler.py"),
-        ("tests/unit/test_langchain_agent_gate.py", "scripts/tests/unit/test_langchain_agent_gate.py"),
-        ("pyproject.toml", "scripts/pyproject.toml"),
-        ("conftest.py", "scripts/conftest.py"),
     ]
     if not (REPO_ROOT / "tools" / "hardware_butler.py").exists():
         return
@@ -207,6 +236,14 @@ def validate_source_sync() -> None:
         packaged = PLUGIN_ROOT / packaged_rel
         require(source.exists(), f"source file missing for sync check: {source_rel}")
         require(packaged.exists(), f"packaged file missing for sync check: {packaged_rel}")
+        if sha256(source) != sha256(packaged):
+            mismatches.append(f"{source_rel} != {packaged_rel}")
+    for source_rel, packaged_rel in optional_source_pairs:
+        source = REPO_ROOT / source_rel
+        packaged = PLUGIN_ROOT / packaged_rel
+        require(packaged.exists(), f"packaged file missing for sync check: {packaged_rel}")
+        if not source.exists():
+            continue
         if sha256(source) != sha256(packaged):
             mismatches.append(f"{source_rel} != {packaged_rel}")
     require(not mismatches, f"packaged runtime is out of sync with source: {mismatches[:5]}")

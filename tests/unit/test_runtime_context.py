@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+import pytest
 import runtime_context
 
 
@@ -10,7 +11,47 @@ def test_package_root_is_defined():
     """Package root should be defined and point to repo root."""
     assert runtime_context.PACKAGE_ROOT.exists()
     assert (runtime_context.PACKAGE_ROOT / "tools").exists()
-    assert (runtime_context.PACKAGE_ROOT / "embeddedskills").exists()
+    assert runtime_context.embeddedskills_available(runtime_context.embeddedskills_root())
+
+
+def test_embeddedskills_root_respects_env_variable(tmp_path: Path):
+    """HW_BUTLER_EMBEDDEDSKILLS_ROOT should override default runtime discovery."""
+    embedded = tmp_path / "embeddedskills"
+    (embedded / "workflow" / "scripts").mkdir(parents=True)
+    (embedded / "safety_gate.py").write_text("", encoding="utf-8")
+    (embedded / "safety_cli.py").write_text("", encoding="utf-8")
+    (embedded / "workflow" / "scripts" / "workflow_run.py").write_text("", encoding="utf-8")
+
+    old_val = os.environ.get("HW_BUTLER_EMBEDDEDSKILLS_ROOT")
+    try:
+        os.environ["HW_BUTLER_EMBEDDEDSKILLS_ROOT"] = str(embedded)
+        assert runtime_context.embeddedskills_root() == embedded.resolve()
+        status = runtime_context.embeddedskills_status()
+        assert status["available"] is True
+        assert status["source"] == "environment"
+    finally:
+        if old_val:
+            os.environ["HW_BUTLER_EMBEDDEDSKILLS_ROOT"] = old_val
+        else:
+            os.environ.pop("HW_BUTLER_EMBEDDEDSKILLS_ROOT", None)
+
+
+def test_embeddedskills_root_falls_back_to_plugin_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A clean root clone can use the packaged plugin runtime mirror."""
+    package_root = tmp_path / "package"
+    mirror = package_root / "plugins" / "hardware-development-butler" / "scripts" / "embeddedskills"
+    (mirror / "workflow" / "scripts").mkdir(parents=True)
+    (mirror / "safety_gate.py").write_text("", encoding="utf-8")
+    (mirror / "safety_cli.py").write_text("", encoding="utf-8")
+    (mirror / "workflow" / "scripts" / "workflow_run.py").write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(runtime_context, "PACKAGE_ROOT", package_root)
+    monkeypatch.delenv("HW_BUTLER_EMBEDDEDSKILLS_ROOT", raising=False)
+
+    assert runtime_context.embeddedskills_root() == mirror.resolve()
+    status = runtime_context.embeddedskills_status()
+    assert status["available"] is True
+    assert status["source"] == "plugin-runtime"
 
 
 def test_workspace_root_defaults_to_package_root():

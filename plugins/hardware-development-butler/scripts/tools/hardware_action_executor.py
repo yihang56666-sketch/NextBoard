@@ -21,7 +21,10 @@ from typing import Any
 TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
-EMBEDDED_DIR = TOOLS_DIR.parent / "embeddedskills"
+
+import runtime_context  # noqa: E402
+
+EMBEDDED_DIR = runtime_context.embeddedskills_root()
 if str(EMBEDDED_DIR) not in sys.path:
     sys.path.insert(0, str(EMBEDDED_DIR))
 
@@ -29,7 +32,6 @@ import build_log_classifier  # noqa: E402
 import command_runner  # noqa: E402
 import hardware_action_audit  # noqa: E402
 import hardware_action_plan  # noqa: E402
-import runtime_context  # noqa: E402
 import safe_io  # noqa: E402
 import safety_gate  # noqa: E402
 
@@ -384,7 +386,7 @@ def execute_workflow_build(plan: dict[str, Any]) -> dict[str, Any]:
     root = Path(plan["root"]).resolve()
     cmd = [
         sys.executable,
-        str(runtime_context.PACKAGE_ROOT / "embeddedskills" / "workflow" / "scripts" / "workflow_run.py"),
+        str(runtime_context.embeddedskills_root() / "workflow" / "scripts" / "workflow_run.py"),
         "build",
         "--workspace",
         str(root),

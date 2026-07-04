@@ -21,13 +21,20 @@ Use this skill as a safety-first hardware project manager. It combines:
 python <skill-dir>\scripts\run_hardware_butler.py doctor --root <project-root> --json
 ```
 
-3. If the root is plausible, run safe onboarding:
+3. If the user wants the easiest connected flow, run safe automation and read the persisted state:
+
+```powershell
+python <skill-dir>\scripts\run_hardware_butler.py auto --root <project-root> --out-dir docs\inspections\<project-name> --json
+python <skill-dir>\scripts\run_hardware_butler.py next-step --root <project-root> --json
+```
+
+4. If you need the older explicit first pass, run safe onboarding:
 
 ```powershell
 python <skill-dir>\scripts\run_hardware_butler.py onboard --root <project-root> --out-dir docs\inspections\<project-name> --json
 ```
 
-4. Read the generated dossier, board profile, firmware profile, build plan, discovery run, and config proposal before recommending build, flash, debug, or hardware changes.
+5. Read the generated dossier, board profile, firmware profile, build plan, discovery run, config proposal, and `.hardware-butler/project-state.json` before recommending build, flash, debug, or hardware changes.
 
 The wrapper sets `HARDWARE_BUTLER_WORKSPACE_ROOT` to the caller's current directory and executes the packaged runtime from the plugin, so report writes stay inside the active workspace.
 
@@ -37,6 +44,12 @@ Use these packaged commands instead of reimplementing scanners:
 
 ```powershell
 python <skill-dir>\scripts\run_hardware_butler.py capabilities --json
+python <skill-dir>\scripts\run_hardware_butler.py auto --root <project-root> --out-dir docs\inspections\<project-name> --json
+python <skill-dir>\scripts\run_hardware_butler.py next-step --root <project-root> --json
+python <skill-dir>\scripts\run_hardware_butler.py brain --root <project-root> --json
+python <skill-dir>\scripts\run_hardware_butler.py ask --root <project-root> --question "PD12 接了什么？" --json
+python <skill-dir>\scripts\run_hardware_butler.py task --root <project-root> --intent prepare-bringup --json
+python <skill-dir>\scripts\run_hardware_butler.py chip-dossier --part <chip> --api-search --api-preset chip-docs --download --json
 python <skill-dir>\scripts\run_hardware_butler.py detect --root <project-root> --json
 python <skill-dir>\scripts\run_hardware_butler.py plan-build --root <project-root>
 python <skill-dir>\scripts\run_hardware_butler.py run-plan --root <project-root> --phase build-discovery --json

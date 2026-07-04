@@ -30,6 +30,12 @@ CORE_FILES = [
     "tools/hardware_butler.py",
     "tools/runtime_context.py",
     "tools/product_doctor.py",
+    "tools/project_workflow.py",
+    "tools/project_brain.py",
+    "tools/evidence_index.py",
+    "tools/evidence_qa.py",
+    "tools/hardware_risk.py",
+    "tools/task_workflows.py",
     "tools/hardware_butler_inspect.py",
     "tools/cube_detect.py",
     "tools/build_plan.py",
@@ -38,6 +44,7 @@ CORE_FILES = [
     "tools/build_log_classifier.py",
     "tools/bench_runbook.py",
     "tools/chip_dossier.py",
+    "tools/document_search_api.py",
     "tools/document_providers.py",
     "tools/pin_capabilities.py",
     "tools/cubemx_config_advisor.py",
@@ -88,14 +95,21 @@ OPTIONAL_EXECUTABLES = [
 
 def capabilities() -> dict[str, Any]:
     items = [
+        cap("guide", "first-day-start-guide", "available", True, "python tools\\hardware_butler.py guide --root <project>", "prints the safe GUI/CLI first-day path without touching project files or hardware"),
         cap("onboard", "safe-onboarding", "available", True, "python tools\\hardware_butler.py onboard --root <project> --json", "writes reports and runs allowlisted discovery only"),
+        cap("auto", "one-command-safe-workflow", "available", True, "python tools\\hardware_butler.py auto --root <project> --json", "runs safe onboarding when needed, writes .hardware-butler/project-state.json, and returns the next recommended action"),
+        cap("next-step", "next-action-recommendation", "available", True, "python tools\\hardware_butler.py next-step --root <project> --json", "read-only project analysis plus project-state.json update; never touches hardware"),
+        cap("workbench", "connected-ui-workbench", "available", True, "python tools\\hardware_butler.py workbench --root <project> --json", "one connected model for project status, safe actions, reports, next step, and UI state"),
+        cap("brain", "project-brain", "available", True, "python tools\\hardware_butler.py brain --root <project> --json", "indexes local evidence, reports missing documents, and runs deterministic hardware risk checks without touching hardware"),
+        cap("ask", "local-evidence-qa", "available", True, "python tools\\hardware_butler.py ask --root <project> --question \"PD12 接了什么\" --json", "answers only from local indexed evidence, CubeMX IOC, and project-brain risks; unknowns stay explicit"),
+        cap("task", "intent-workflow-planner", "available", True, "python tools\\hardware_butler.py task --root <project> --intent prepare-bringup --json", "expands common hardware development intents into safe local commands without executing hardware actions"),
         cap("inspect", "project-dossier", "available", True, "python tools\\hardware_butler.py inspect --root <project>", "writes dossier reports"),
         cap("detect", "cubemx-backend-detection", "available", True, "python tools\\hardware_butler.py detect --root <project> --json", "read-only"),
         cap("plan-build", "build-plan-generation", "available", True, "python tools\\hardware_butler.py plan-build --root <project>", "no execution"),
         cap("run-plan", "safe-discovery-execution", "available", True, "python tools\\hardware_butler.py run-plan --root <project> --phase build-discovery --json", "hard allowlist only"),
         cap("propose-config", "embeddedskills-config-proposal", "available", True, "python tools\\hardware_butler.py propose-config --root <project> --target <target>", "dry-run by default"),
         cap("classify-log", "build-log-diagnosis", "available", True, "python tools\\hardware_butler.py classify-log <log> --json", "read-only"),
-        cap("chip-dossier", "chip-document-dossier", "available-limited", True, "python tools\\hardware_butler.py chip-dossier --part <chip> --search --download", "uses built-in vendor hints or supplied sources, validates PDFs, extracts text, and writes evidence summaries; arbitrary vendor portals remain best-effort"),
+        cap("chip-dossier", "chip-document-dossier", "available-limited", True, "python tools\\hardware_butler.py chip-dossier --part <chip> --api-search --download", "uses configured search APIs, built-in vendor hints, or supplied sources, validates PDFs, extracts text, and writes evidence summaries; arbitrary vendor portals remain best-effort"),
         cap("advise-pin", "cubemx-pin-configuration-advice", "available", True, "python tools\\hardware_butler.py advise-pin --root <project> --pin PD12 --function gpio-output --pin-evidence <pin-capabilities.json>", "read-only against firmware project; optional package pin evidence labels support as verified, contradicted, inferred, or unknown"),
         cap("patch-ioc", "cubemx-ioc-safe-patch", "available-limited", True, "python tools\\hardware_butler.py patch-ioc --root <project> --function i2c --instance I2C1 --scl PB6 --sda PB7", "dry-run by default; writes .ioc and backup only with --write --confirm-write; blocks debug/clock/occupied pins"),
         cap("firmware-plan", "freertos-firmware-implementation-plan", "available", True, "python tools\\hardware_butler.py firmware-plan --root <project> --feature sensor-read --pin PB7 --function i2c", "plan-only, no code edits"),
@@ -152,6 +166,15 @@ def doctor(root: Path) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     checks.append(check("python.version", "ok" if sys.version_info >= (3, 10) else "error", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"))
     checks.append(check("python.trusted_interpreter", "ok", str(command_runner.TRUSTED_PYTHON)))
+    embedded_status = runtime_context.embeddedskills_status()
+    checks.append(
+        check(
+            "embeddedskills.runtime",
+            "ok" if embedded_status["available"] else "error",
+            str(embedded_status["path"]),
+            embedded_status,
+        )
+    )
     checks.extend(path_checks("core.file", CORE_FILES, required=True))
     checks.extend(path_checks("embeddedskills.file", EMBEDDEDSKILLS_FILES, required=True))
     checks.extend(path_checks("agent.file", AGENT_FILES, required=True))
@@ -382,11 +405,18 @@ def check(name: str, status: str, message: str, details: dict[str, Any] | None =
 def path_checks(prefix: str, paths: list[str], *, required: bool) -> list[dict[str, Any]]:
     results = []
     for value in paths:
-        path = REPO_ROOT / value
+        path = repo_file(value)
         exists = path.exists()
         status = "ok" if exists else ("error" if required else "warn")
         results.append(check(f"{prefix}:{value}", status, str(path)))
     return results
+
+
+def repo_file(value: str) -> Path:
+    path = Path(value)
+    if path.parts and path.parts[0] == "embeddedskills":
+        return Path(runtime_context.embeddedskills_root()) / Path(*path.parts[1:])
+    return Path(REPO_ROOT) / path
 
 
 def report_dir_check(root: Path) -> dict[str, Any]:

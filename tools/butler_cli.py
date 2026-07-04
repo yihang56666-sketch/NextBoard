@@ -67,6 +67,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Fallback to original CLI
     subparsers.add_parser("legacy", help="Use original flat CLI")
+    subparsers.add_parser("guide", help="Show first-day guide", add_help=False)
 
     return parser
 
@@ -79,6 +80,11 @@ def main() -> None:
     args, remaining = parser.parse_known_args()
 
     # If no group specified or legacy, use original CLI
+    if args.group == "guide":
+        sys.argv = [sys.argv[0], "guide"] + remaining
+        original_main()
+        return
+
     if not args.group or args.group == "legacy":
         logger.info("Using legacy CLI")
         original_main()

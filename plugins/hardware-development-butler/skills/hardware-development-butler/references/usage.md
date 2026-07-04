@@ -6,7 +6,11 @@ Start with a local project root that contains board documents, CubeMX output, fi
 python <skill-dir>\scripts\run_hardware_butler.py doctor --root <project-root> --json
 python <skill-dir>\scripts\run_hardware_butler.py onboard --root <project-root> --out-dir docs\inspections\<project-name> --json
 python <skill-dir>\scripts\run_hardware_butler.py status --root <project-root> --json
-python <skill-dir>\scripts\run_hardware_butler.py chip-dossier --part STM32F407VGTx --source <official-pdf-url> --download --json
+python <skill-dir>\scripts\run_hardware_butler.py brain --root <project-root> --json
+python <skill-dir>\scripts\run_hardware_butler.py ask --root <project-root> --question "PD12 接了什么？" --json
+python <skill-dir>\scripts\run_hardware_butler.py task --root <project-root> --intent prepare-bringup --json
+python <skill-dir>\scripts\run_hardware_butler.py chip-dossier --part STM32F407VGTx --api-search --api-preset chip-docs --download --json
+python <skill-dir>\scripts\run_hardware_butler.py chip-dossier --part STM32F407VGTx --api-search --api-preset board-docs --api-query "discovery schematic" --download --json
 python <skill-dir>\scripts\run_hardware_butler.py advise-pin --root <project-root> --pin PB7 --function i2c --json
 python <skill-dir>\scripts\run_hardware_butler.py advise-pin --root <project-root> --pin PB7 --function i2c --pin-evidence <pin-capabilities.json> --json
 python <skill-dir>\scripts\run_hardware_butler.py patch-ioc --root <project-root> --function i2c --instance I2C1 --scl PB6 --sda PB7 --json
@@ -20,12 +24,15 @@ Main command meanings:
 - `capabilities`: show available and gated product functions.
 - `doctor`: check packaged runtime, optional external tools, embeddedskills files, agent role files, backend detection, config, and safe runner policy.
 - `onboard`: write dossier, board profile, firmware profile, build plan, discovery report, config proposal, and manifest.
+- `brain`: index local project evidence, identify missing schematic/BOM/manual/datasheet material, run deterministic risk checks, and write a project brain report.
+- `ask`: answer project questions from indexed local evidence and CubeMX `.ioc` data; unknown board-level facts stay explicit.
+- `task`: expand common intents such as evidence collection, hardware risk review, peripheral configuration, build-failure diagnosis, or bring-up preparation into safe local commands.
 - `detect`: parse CubeMX `.ioc` and rank Keil/CMake-GCC/EIDE/Makefile evidence.
 - `plan-build`: render structured argv plans without executing build commands.
 - `run-plan --phase build-discovery`: run only safe allowlisted discovery commands.
 - `propose-config`: generate `.embeddedskills/config.json` proposal; write only with `--write --confirm-write`.
 - `classify-log`: bucket compiler/linker logs into actionable categories.
-- `chip-dossier`: create a chip evidence folder, record official sources, optionally search/download validated PDFs, and write source map/manual/CubeMX/safety notes.
+- `chip-dossier`: create a chip evidence folder, record official sources, optionally search/download validated PDFs with `chip-docs`, `board-docs`, or `part-risk` presets, and write source map/manual/CubeMX/safety notes.
 - `summarize-manual`: summarize extracted datasheet/reference-manual text with evidence line numbers; missing categories stay unknown.
 - `advise-pin`: inspect the project `.ioc`, optionally read package pin capability evidence, and explain CubeMX settings, conflicts, alternatives, generated-code impact, and damage-risk notes. Pin capability support is labeled `verified`, `contradicted`, `inferred`, or `unknown`.
 - `patch-ioc`: prepare a safe `.ioc` diff for GPIO output or I2C pins; writing requires `--write --confirm-write` and revalidates the current `.ioc` before writing.
