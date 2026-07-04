@@ -77,7 +77,7 @@ After pushing, verify that GitHub Actions runs the matrix in
 Then run the read-only remote launch audit. It exits nonzero until `main`
 matches local HEAD, the GitHub About metadata matches
 `docs/GITHUB_REPOSITORY_SETTINGS.md`, and the latest `ci.yml` run on `main`
-completed successfully.
+completed successfully for the local launch candidate commit.
 
 ```powershell
 python tools\github_launch_audit.py --json

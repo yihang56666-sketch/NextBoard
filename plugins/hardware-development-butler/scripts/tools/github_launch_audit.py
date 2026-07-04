@@ -222,7 +222,13 @@ def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
     return checks
 
 
-def check_workflow_run(workflow_run: dict[str, Any] | None, *, workflow: str, branch: str) -> AuditCheck:
+def check_workflow_run(
+    workflow_run: dict[str, Any] | None,
+    *,
+    workflow: str,
+    branch: str,
+    expected_sha: str | None = None,
+) -> AuditCheck:
     if workflow_run is None:
         return AuditCheck(
             name="ci.main",
@@ -234,20 +240,48 @@ def check_workflow_run(workflow_run: dict[str, Any] | None, *, workflow: str, br
     status = str(workflow_run.get("status") or "")
     conclusion = str(workflow_run.get("conclusion") or "")
     html_url = str(workflow_run.get("html_url") or "")
+    head_sha = str(workflow_run.get("head_sha") or "")
+    details = {"status": status, "conclusion": conclusion, "html_url": html_url}
+    if head_sha:
+        details["head_sha"] = head_sha
+    if expected_sha:
+        details["expected_sha"] = expected_sha
+    if status == "completed" and conclusion == "success" and expected_sha and not head_sha:
+        return AuditCheck(
+            name="ci.main",
+            status="error",
+            message=f"Latest {workflow} run on {branch} does not expose its commit SHA.",
+            next_action=(
+                "Open the workflow run, confirm which commit it tested, wait for a successful run "
+                f"for {expected_sha}, then rerun this audit."
+            ),
+            details=details,
+        )
+    if status == "completed" and conclusion == "success" and expected_sha and head_sha != expected_sha:
+        return AuditCheck(
+            name="ci.main",
+            status="error",
+            message=f"Latest {workflow} run on {branch} does not match expected commit.",
+            next_action=(
+                f"Push {branch} if needed, wait for {workflow} to run for {expected_sha}, "
+                "then rerun this audit."
+            ),
+            details=details,
+        )
     if status == "completed" and conclusion == "success":
         return AuditCheck(
             name="ci.main",
             status="ok",
             message=f"Latest {workflow} run on {branch} completed successfully.",
             next_action="No action required.",
-            details={"status": status, "conclusion": conclusion, "html_url": html_url},
+            details=details,
         )
     return AuditCheck(
         name="ci.main",
         status="error",
         message=f"Latest {workflow} run on {branch} is not a successful completed run.",
         next_action="Open the workflow run, fix the failing CI result, wait for a successful rerun, then rerun this audit.",
-        details={"status": status, "conclusion": conclusion, "html_url": html_url},
+        details=details,
     )
 
 
@@ -266,7 +300,7 @@ def build_report(
     checks = [
         check_heads(local_sha, remote_sha, remote=remote, branch=branch),
         *check_repository_metadata(repository),
-        check_workflow_run(workflow_run, workflow=workflow, branch=branch),
+        check_workflow_run(workflow_run, workflow=workflow, branch=branch, expected_sha=local_sha),
     ]
     status: Status = "ok" if all(check.status == "ok" for check in checks) else "error"
     return AuditReport(

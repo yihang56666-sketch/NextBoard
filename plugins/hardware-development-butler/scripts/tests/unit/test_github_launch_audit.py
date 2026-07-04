@@ -19,6 +19,7 @@ def _workflow_run(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "status": "completed",
         "conclusion": "success",
+        "head_sha": "abc",
         "html_url": "https://github.com/LeoKemp223/NextBoard/actions/runs/1",
     }
     payload.update(overrides)
@@ -75,12 +76,48 @@ def test_build_report_reports_push_metadata_and_ci_gaps() -> None:
     assert "fix the failing CI" in errors["ci.main"].next_action
 
 
+def test_build_report_reports_stale_ci_commit() -> None:
+    report = github_launch_audit.build_report(
+        owner="LeoKemp223",
+        repo="NextBoard",
+        branch="main",
+        workflow="ci.yml",
+        local_sha="new-sha",
+        remote_sha="new-sha",
+        repository=_repo_payload(),
+        workflow_run=_workflow_run(head_sha="old-sha"),
+        remote="origin",
+    )
+
+    errors = {check.name: check for check in report.checks if check.status == "error"}
+
+    assert report.status == "error"
+    assert set(errors) == {"ci.main"}
+    assert "does not match expected commit" in errors["ci.main"].message
+    assert errors["ci.main"].details["expected_sha"] == "new-sha"
+
+
 def test_missing_workflow_run_is_error() -> None:
     check = github_launch_audit.check_workflow_run(None, workflow="ci.yml", branch="main")
 
     assert check.status == "error"
     assert "No ci.yml workflow run found" in check.message
     assert "wait for the ci.yml GitHub Actions run" in check.next_action
+
+
+def test_workflow_run_must_match_expected_commit() -> None:
+    check = github_launch_audit.check_workflow_run(
+        _workflow_run(head_sha="old-sha"),
+        workflow="ci.yml",
+        branch="main",
+        expected_sha="new-sha",
+    )
+
+    assert check.status == "error"
+    assert "does not match expected commit" in check.message
+    assert "new-sha" in check.next_action
+    assert check.details["head_sha"] == "old-sha"
+    assert check.details["expected_sha"] == "new-sha"
 
 
 def test_human_report_prints_next_actions_for_errors(capsys) -> None:
