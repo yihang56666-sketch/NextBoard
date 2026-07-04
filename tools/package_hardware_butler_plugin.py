@@ -26,6 +26,7 @@ EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 MANAGED_RUNTIME_ITEMS = {
     ".codex",
     "AGENTS.md",
+    "CHANGELOG.md",
     "README.md",
     "agents",
     "conftest.py",
@@ -171,6 +172,7 @@ def package_runtime() -> list[str]:
     for name in (
         "README.md",
         "AGENTS.md",
+        "CHANGELOG.md",
         "pyproject.toml",
         "requirements.txt",
         "requirements-dev.txt",

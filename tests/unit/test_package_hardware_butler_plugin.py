@@ -23,6 +23,7 @@ def test_package_runtime_preserves_packaged_embeddedskills_when_root_checkout_is
     for filename in (
         "README.md",
         "AGENTS.md",
+        "CHANGELOG.md",
         "pyproject.toml",
         "requirements.txt",
         "requirements-dev.txt",
@@ -48,3 +49,4 @@ def test_package_runtime_preserves_packaged_embeddedskills_when_root_checkout_is
     assert (embedded / "safety_gate.py").read_text(encoding="utf-8") == "SENTINEL = 'keep me'\n"
     assert any(item == "embeddedskills/ (preserved from plugin-runtime)" for item in copied)
     assert (runtime_root / "tools" / "hardware_butler.py").is_file()
+    assert (runtime_root / "CHANGELOG.md").is_file()

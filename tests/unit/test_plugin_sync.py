@@ -39,6 +39,7 @@ SYNCED_ROOT_FILES = (
     "requirements-dev.txt",
     "requirements-all.txt",
     "conftest.py",
+    "CHANGELOG.md",
 )
 
 EXCLUDED_DIRS = {
