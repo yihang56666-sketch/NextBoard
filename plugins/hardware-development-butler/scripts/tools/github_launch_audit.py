@@ -55,6 +55,7 @@ class AuditCheck:
     name: str
     status: Status
     message: str
+    next_action: str
     details: dict[str, Any]
 
 
@@ -157,12 +158,14 @@ def check_heads(local_sha: str, remote_sha: str, *, remote: str, branch: str) ->
             name="remote.head",
             status="ok",
             message=f"{remote}/{branch} matches local HEAD.",
+            next_action="No action required.",
             details={"local": local_sha, "remote": remote_sha},
         )
     return AuditCheck(
         name="remote.head",
         status="error",
         message=f"{remote}/{branch} does not match local HEAD; push is still required.",
+        next_action=f"Push local commits with `git push {remote} {branch}`, then wait for CI on {branch}.",
         details={"local": local_sha, "remote": remote_sha},
     )
 
@@ -177,6 +180,9 @@ def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
             message="Repository description matches launch settings."
             if description == EXPECTED_DESCRIPTION
             else "Repository description does not match launch settings.",
+            next_action="No action required."
+            if description == EXPECTED_DESCRIPTION
+            else "Set the GitHub About description to the expected value in docs/GITHUB_REPOSITORY_SETTINGS.md.",
             details={"actual": description, "expected": EXPECTED_DESCRIPTION},
         )
     )
@@ -189,6 +195,9 @@ def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
             message="Repository homepage matches launch settings."
             if homepage == EXPECTED_HOMEPAGE
             else "Repository homepage does not match launch settings.",
+            next_action="No action required."
+            if homepage == EXPECTED_HOMEPAGE
+            else "Set the GitHub About homepage to the expected value in docs/GITHUB_REPOSITORY_SETTINGS.md.",
             details={"actual": homepage, "expected": EXPECTED_HOMEPAGE},
         )
     )
@@ -204,6 +213,9 @@ def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
             message="Repository topics include the launch topic set."
             if not missing_topics
             else "Repository topics are missing launch topics.",
+            next_action="No action required."
+            if not missing_topics
+            else f"Add these GitHub repository topics: {', '.join(missing_topics)}.",
             details={"actual": sorted(actual_topics), "missing": missing_topics, "expected": sorted(EXPECTED_TOPICS)},
         )
     )
@@ -216,6 +228,7 @@ def check_workflow_run(workflow_run: dict[str, Any] | None, *, workflow: str, br
             name="ci.main",
             status="error",
             message=f"No {workflow} workflow run found on {branch}.",
+            next_action=f"Push {branch}, wait for the {workflow} GitHub Actions run, then rerun this audit.",
             details={},
         )
     status = str(workflow_run.get("status") or "")
@@ -226,12 +239,14 @@ def check_workflow_run(workflow_run: dict[str, Any] | None, *, workflow: str, br
             name="ci.main",
             status="ok",
             message=f"Latest {workflow} run on {branch} completed successfully.",
+            next_action="No action required.",
             details={"status": status, "conclusion": conclusion, "html_url": html_url},
         )
     return AuditCheck(
         name="ci.main",
         status="error",
         message=f"Latest {workflow} run on {branch} is not a successful completed run.",
+        next_action="Open the workflow run, fix the failing CI result, wait for a successful rerun, then rerun this audit.",
         details={"status": status, "conclusion": conclusion, "html_url": html_url},
     )
 
@@ -289,6 +304,8 @@ def print_report(report: AuditReport, *, as_json: bool) -> None:
     print(f"Status: {report.status}")
     for check in report.checks:
         print(f"- [{check.status}] {check.name}: {check.message}")
+        if check.status == "error":
+            print(f"  next: {check.next_action}")
 
 
 def main(argv: list[str] | None = None) -> int:

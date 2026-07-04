@@ -44,6 +44,7 @@ def test_build_report_is_ok_when_remote_metadata_and_ci_match() -> None:
         "repo.topics",
         "ci.main",
     }
+    assert all(check.next_action == "No action required." for check in report.checks)
 
 
 def test_build_report_reports_push_metadata_and_ci_gaps() -> None:
@@ -64,7 +65,12 @@ def test_build_report_reports_push_metadata_and_ci_gaps() -> None:
     assert report.status == "error"
     assert set(errors) == {"remote.head", "repo.description", "repo.homepage", "repo.topics", "ci.main"}
     assert "push is still required" in errors["remote.head"].message
+    assert "git push origin main" in errors["remote.head"].next_action
+    assert "GitHub About description" in errors["repo.description"].next_action
+    assert "GitHub About homepage" in errors["repo.homepage"].next_action
     assert "stm32" in errors["repo.topics"].details["missing"]
+    assert "stm32" in errors["repo.topics"].next_action
+    assert "fix the failing CI" in errors["ci.main"].next_action
 
 
 def test_missing_workflow_run_is_error() -> None:
@@ -72,6 +78,28 @@ def test_missing_workflow_run_is_error() -> None:
 
     assert check.status == "error"
     assert "No ci.yml workflow run found" in check.message
+    assert "wait for the ci.yml GitHub Actions run" in check.next_action
+
+
+def test_human_report_prints_next_actions_for_errors(capsys) -> None:
+    report = github_launch_audit.build_report(
+        owner="LeoKemp223",
+        repo="NextBoard",
+        branch="main",
+        workflow="ci.yml",
+        local_sha="local",
+        remote_sha="remote",
+        repository=_repo_payload(description="old", homepage="", topics=["hardware"]),
+        workflow_run=None,
+        remote="origin",
+    )
+
+    github_launch_audit.print_report(report, as_json=False)
+
+    output = capsys.readouterr().out
+    assert "next: Push local commits with `git push origin main`" in output
+    assert "next: Set the GitHub About description" in output
+    assert "next: Add these GitHub repository topics" in output
 
 
 def test_workflow_404_is_treated_as_missing_run(monkeypatch) -> None:

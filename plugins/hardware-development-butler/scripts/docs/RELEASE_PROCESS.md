@@ -83,6 +83,9 @@ completed successfully.
 python tools\github_launch_audit.py --json
 ```
 
+For an operator-friendly checklist, run the same command without `--json`; any
+failing check prints a `next:` line with the exact follow-up action.
+
 ## 5. Tag
 
 Tag only after CI is green:
