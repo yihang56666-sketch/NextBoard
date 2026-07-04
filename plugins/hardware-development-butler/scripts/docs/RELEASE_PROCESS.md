@@ -74,6 +74,15 @@ git push origin main
 After pushing, verify that GitHub Actions runs the matrix in
 `.github/workflows/ci.yml` and passes on `main`.
 
+Then run the read-only remote launch audit. It exits nonzero until `main`
+matches local HEAD, the GitHub About metadata matches
+`docs/GITHUB_REPOSITORY_SETTINGS.md`, and the latest `ci.yml` run on `main`
+completed successfully.
+
+```powershell
+python tools\github_launch_audit.py --json
+```
+
 ## 5. Tag
 
 Tag only after CI is green:

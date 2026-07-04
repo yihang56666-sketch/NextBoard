@@ -22,6 +22,7 @@
 - [x] `python tests\validate_hardware_butler.py`
 - [x] `python tools\package_hardware_butler_plugin.py`
 - [x] `python plugins\hardware-development-butler\scripts\validate_package.py`
+- [x] `python tools\github_launch_audit.py --json` exists as the read-only remote launch verifier.
 - [x] Clean candidate tree without root `embeddedskills/` passes package, pytest, butler validation, and plugin validation using the packaged runtime mirror.
 - [x] CI runs lint, mypy, tests with a fresh basetemp, butler validation, and plugin validation.
 
@@ -37,5 +38,6 @@
 - [x] Dependabot configuration exists for pip and GitHub Actions.
 - [x] Issue forms are available.
 - [x] Pull request template includes verification and safety checks.
+- [ ] `python tools\github_launch_audit.py --json` reports `"status": "ok"` against GitHub.
 - [ ] CI passes on `main`.
 - [ ] Repository description, topics, and homepage are set in GitHub settings.

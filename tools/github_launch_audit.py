@@ -1,0 +1,318 @@
+"""Read-only checks for the GitHub launch state."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OWNER = "LeoKemp223"
+DEFAULT_REPO = "NextBoard"
+DEFAULT_BRANCH = "main"
+DEFAULT_WORKFLOW = "ci.yml"
+EXPECTED_DESCRIPTION = (
+    "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, "
+    "evidence indexing, firmware planning, bench runbooks, and gated hardware actions."
+)
+EXPECTED_HOMEPAGE = "https://github.com/LeoKemp223/NextBoard#readme"
+EXPECTED_TOPICS = frozenset(
+    {
+        "embedded",
+        "hardware",
+        "stm32",
+        "cubemx",
+        "firmware",
+        "freertos",
+        "jlink",
+        "openocd",
+        "probe-rs",
+        "serial",
+        "can",
+        "safety",
+        "codex-plugin",
+    }
+)
+
+Status = Literal["ok", "error"]
+
+
+class GitHubApiError(RuntimeError):
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@dataclass(frozen=True)
+class AuditCheck:
+    name: str
+    status: Status
+    message: str
+    details: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class AuditReport:
+    schema_version: int
+    status: Status
+    repository: str
+    branch: str
+    checks: list[AuditCheck]
+
+
+def _run_git(args: tuple[str, ...]) -> str:
+    result = subprocess.run(
+        ("git", *args),
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f"git {' '.join(args)} failed with exit code {result.returncode}")
+    return result.stdout.strip()
+
+
+def local_head() -> str:
+    return _run_git(("rev-parse", "HEAD"))
+
+
+def remote_head(remote: str, branch: str) -> str:
+    output = _run_git(("ls-remote", remote, f"refs/heads/{branch}"))
+    if not output:
+        raise RuntimeError(f"remote branch not found: {remote}/{branch}")
+    return output.split()[0]
+
+
+def _request_json(url: str, *, token: str | None = None) -> dict[str, Any]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "hardware-butler-launch-audit",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise GitHubApiError(f"GitHub API returned HTTP {exc.code} for {url}: {body}", status_code=exc.code) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"GitHub API request failed for {url}: {exc.reason}") from exc
+    loaded = json.loads(payload)
+    if not isinstance(loaded, dict):
+        raise RuntimeError(f"GitHub API returned non-object JSON for {url}")
+    return loaded
+
+
+def fetch_repository(owner: str, repo: str, *, token: str | None = None) -> dict[str, Any]:
+    return _request_json(f"https://api.github.com/repos/{owner}/{repo}", token=token)
+
+
+def fetch_latest_workflow_run(
+    owner: str,
+    repo: str,
+    workflow: str,
+    branch: str,
+    *,
+    token: str | None = None,
+) -> dict[str, Any] | None:
+    url = (
+        f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow}/runs"
+        f"?branch={branch}&per_page=1"
+    )
+    try:
+        payload = _request_json(url, token=token)
+    except GitHubApiError as exc:
+        if exc.status_code == 404:
+            return None
+        raise
+    runs = payload.get("workflow_runs")
+    if not isinstance(runs, list) or not runs:
+        return None
+    first = runs[0]
+    if not isinstance(first, dict):
+        raise RuntimeError("GitHub API returned malformed workflow_runs entry")
+    return first
+
+
+def _normalize_topic(value: object) -> str:
+    return str(value).strip().lower()
+
+
+def check_heads(local_sha: str, remote_sha: str, *, remote: str, branch: str) -> AuditCheck:
+    if local_sha == remote_sha:
+        return AuditCheck(
+            name="remote.head",
+            status="ok",
+            message=f"{remote}/{branch} matches local HEAD.",
+            details={"local": local_sha, "remote": remote_sha},
+        )
+    return AuditCheck(
+        name="remote.head",
+        status="error",
+        message=f"{remote}/{branch} does not match local HEAD; push is still required.",
+        details={"local": local_sha, "remote": remote_sha},
+    )
+
+
+def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
+    checks: list[AuditCheck] = []
+    description = str(repository.get("description") or "")
+    checks.append(
+        AuditCheck(
+            name="repo.description",
+            status="ok" if description == EXPECTED_DESCRIPTION else "error",
+            message="Repository description matches launch settings."
+            if description == EXPECTED_DESCRIPTION
+            else "Repository description does not match launch settings.",
+            details={"actual": description, "expected": EXPECTED_DESCRIPTION},
+        )
+    )
+
+    homepage = str(repository.get("homepage") or "")
+    checks.append(
+        AuditCheck(
+            name="repo.homepage",
+            status="ok" if homepage == EXPECTED_HOMEPAGE else "error",
+            message="Repository homepage matches launch settings."
+            if homepage == EXPECTED_HOMEPAGE
+            else "Repository homepage does not match launch settings.",
+            details={"actual": homepage, "expected": EXPECTED_HOMEPAGE},
+        )
+    )
+
+    raw_topics = repository.get("topics", [])
+    topic_values = raw_topics if isinstance(raw_topics, list) else []
+    actual_topics = {_normalize_topic(topic) for topic in topic_values}
+    missing_topics = sorted(EXPECTED_TOPICS - actual_topics)
+    checks.append(
+        AuditCheck(
+            name="repo.topics",
+            status="ok" if not missing_topics else "error",
+            message="Repository topics include the launch topic set."
+            if not missing_topics
+            else "Repository topics are missing launch topics.",
+            details={"actual": sorted(actual_topics), "missing": missing_topics, "expected": sorted(EXPECTED_TOPICS)},
+        )
+    )
+    return checks
+
+
+def check_workflow_run(workflow_run: dict[str, Any] | None, *, workflow: str, branch: str) -> AuditCheck:
+    if workflow_run is None:
+        return AuditCheck(
+            name="ci.main",
+            status="error",
+            message=f"No {workflow} workflow run found on {branch}.",
+            details={},
+        )
+    status = str(workflow_run.get("status") or "")
+    conclusion = str(workflow_run.get("conclusion") or "")
+    html_url = str(workflow_run.get("html_url") or "")
+    if status == "completed" and conclusion == "success":
+        return AuditCheck(
+            name="ci.main",
+            status="ok",
+            message=f"Latest {workflow} run on {branch} completed successfully.",
+            details={"status": status, "conclusion": conclusion, "html_url": html_url},
+        )
+    return AuditCheck(
+        name="ci.main",
+        status="error",
+        message=f"Latest {workflow} run on {branch} is not a successful completed run.",
+        details={"status": status, "conclusion": conclusion, "html_url": html_url},
+    )
+
+
+def build_report(
+    *,
+    owner: str,
+    repo: str,
+    branch: str,
+    workflow: str,
+    local_sha: str,
+    remote_sha: str,
+    repository: dict[str, Any],
+    workflow_run: dict[str, Any] | None,
+    remote: str,
+) -> AuditReport:
+    checks = [
+        check_heads(local_sha, remote_sha, remote=remote, branch=branch),
+        *check_repository_metadata(repository),
+        check_workflow_run(workflow_run, workflow=workflow, branch=branch),
+    ]
+    status: Status = "ok" if all(check.status == "ok" for check in checks) else "error"
+    return AuditReport(
+        schema_version=1,
+        status=status,
+        repository=f"{owner}/{repo}",
+        branch=branch,
+        checks=checks,
+    )
+
+
+def configure_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Read-only GitHub launch-state audit.")
+    parser.add_argument("--owner", default=DEFAULT_OWNER, help="GitHub repository owner")
+    parser.add_argument("--repo", default=DEFAULT_REPO, help="GitHub repository name")
+    parser.add_argument("--remote", default="origin", help="Git remote name to compare against local HEAD")
+    parser.add_argument("--branch", default=DEFAULT_BRANCH, help="Branch expected to contain local HEAD")
+    parser.add_argument("--workflow", default=DEFAULT_WORKFLOW, help="Workflow file name to verify on the branch")
+    parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
+    return parser.parse_args(argv)
+
+
+def print_report(report: AuditReport, *, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(asdict(report), ensure_ascii=False, indent=2))
+        return
+    print(f"GitHub launch audit: {report.repository}@{report.branch}")
+    print(f"Status: {report.status}")
+    for check in report.checks:
+        print(f"- [{check.status}] {check.name}: {check.message}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    configure_stdio()
+    args = parse_args(argv)
+    token = os.environ.get("GITHUB_TOKEN") or None
+    try:
+        report = build_report(
+            owner=args.owner,
+            repo=args.repo,
+            branch=args.branch,
+            workflow=args.workflow,
+            local_sha=local_head(),
+            remote_sha=remote_head(args.remote, args.branch),
+            repository=fetch_repository(args.owner, args.repo, token=token),
+            workflow_run=fetch_latest_workflow_run(args.owner, args.repo, args.workflow, args.branch, token=token),
+            remote=args.remote,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    print_report(report, as_json=args.json)
+    return 0 if report.status == "ok" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
