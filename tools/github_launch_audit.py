@@ -351,6 +351,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def build_github_cli_commands(report: AuditReport) -> list[str]:
+    failed_checks = {check.name: check for check in report.checks if check.status == "error"}
+    commands: list[str] = []
+
+    if "repo.description" in failed_checks or "repo.homepage" in failed_checks:
+        commands.append(
+            "\n".join(
+                (
+                    f"gh repo edit {report.repository} `",
+                    f'  --description "{EXPECTED_DESCRIPTION}" `',
+                    f'  --homepage "{EXPECTED_HOMEPAGE}"',
+                )
+            )
+        )
+
+    topics_check = failed_checks.get("repo.topics")
+    if topics_check is not None:
+        raw_missing = topics_check.details.get("missing", sorted(EXPECTED_TOPICS))
+        missing_topics = sorted(str(topic) for topic in raw_missing) if isinstance(raw_missing, list) else sorted(EXPECTED_TOPICS)
+        if missing_topics:
+            lines = [f"gh repo edit {report.repository} `"]
+            for index, topic in enumerate(missing_topics):
+                suffix = " `" if index < len(missing_topics) - 1 else ""
+                lines.append(f"  --add-topic {topic}{suffix}")
+            commands.append("\n".join(lines))
+
+    return commands
+
+
 def print_report(report: AuditReport, *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(asdict(report), ensure_ascii=False, indent=2))
@@ -361,6 +390,12 @@ def print_report(report: AuditReport, *, as_json: bool) -> None:
         print(f"- [{check.status}] {check.name}: {check.message}")
         if check.status == "error":
             print(f"  next: {check.next_action}")
+    commands = build_github_cli_commands(report)
+    if commands:
+        print()
+        print("Suggested GitHub CLI commands:")
+        for command in commands:
+            print(command)
 
 
 def main(argv: list[str] | None = None) -> int:

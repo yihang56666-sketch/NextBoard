@@ -139,6 +139,11 @@ def test_human_report_prints_next_actions_for_errors(capsys) -> None:
     assert "next: Push local commits with `git push origin main`" in output
     assert "next: Set the GitHub About description" in output
     assert "next: Add these GitHub repository topics" in output
+    assert "Suggested GitHub CLI commands:" in output
+    assert "gh repo edit LeoKemp223/NextBoard `" in output
+    assert f'--description "{github_launch_audit.EXPECTED_DESCRIPTION}"' in output
+    assert f'--homepage "{github_launch_audit.EXPECTED_HOMEPAGE}"' in output
+    assert "--add-topic stm32" in output
 
 
 def test_runtime_errors_are_structured_json(monkeypatch, capsys) -> None:
