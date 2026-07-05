@@ -50,6 +50,12 @@ Do not bypass `tools/hardware_action_executor.py`,
 erase, reset, debug, serial/CAN/network writes, and long-running observation
 must stay planned and gated.
 
+## Conduct
+
+Follow `CODE_OF_CONDUCT.md`. For this project, respectful collaboration includes
+being precise about hardware evidence and treating unsafe action paths as serious
+issues.
+
 If you change packaged runtime files, sync and validate the Codex plugin:
 
 ```powershell

@@ -7,6 +7,36 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_root_community_files_are_present() -> None:
+    if not (REPO_ROOT / ".github").is_dir():
+        pytest.skip("GitHub community files are only required in the root repository")
+
+    for relative in (
+        "LICENSE",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        "SUPPORT.md",
+        "CODE_OF_CONDUCT.md",
+        ".github/pull_request_template.md",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
+        ".github/ISSUE_TEMPLATE/feature_request.yml",
+        ".github/ISSUE_TEMPLATE/hardware_safety.yml",
+    ):
+        assert (REPO_ROOT / relative).is_file()
+
+
+def test_code_of_conduct_mentions_hardware_safety() -> None:
+    path = REPO_ROOT / "CODE_OF_CONDUCT.md"
+    if not path.exists():
+        pytest.skip("code of conduct is only required in the root repository")
+
+    text = path.read_text(encoding="utf-8")
+
+    assert "safety" in text.lower()
+    assert "hardware" in text.lower()
+    assert "SECURITY.md" in text
+
+
 def test_release_note_config_covers_launch_labels() -> None:
     config_path = REPO_ROOT / ".github" / "release.yml"
     if not config_path.exists():

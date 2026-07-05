@@ -10,7 +10,7 @@
 - [x] Install/runtime choices are documented in `docs/INSTALL.md`.
 - [x] Hardware understanding workflow is documented as source-backed evidence, CubeMX, firmware, and gated bench use.
 - [x] Release process and repository settings are documented.
-- [x] `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, and `SUPPORT.md` exist.
+- [x] `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `SUPPORT.md`, and `CODE_OF_CONDUCT.md` exist.
 
 ## Verification
 

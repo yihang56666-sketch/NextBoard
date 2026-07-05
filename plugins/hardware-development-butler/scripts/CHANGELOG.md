@@ -17,9 +17,9 @@ touching real hardware.
   runbooks.
 - CLI and GUI entry points for project scanning, evidence Q&A, firmware
   planning, safety audits, and workbench status.
-- GitHub CI, issue templates, pull request template, contribution guide,
-  support policy, security policy, Dependabot, launch checklist, and release
-  process.
+- GitHub CI, issue templates, pull request template, contribution guide, code
+  of conduct, support policy, security policy, Dependabot, launch checklist,
+  and release process.
 - Read-only `github_launch_audit.py` for checking remote HEAD, GitHub About
   metadata, repository topics, and the latest `ci.yml` run.
 - Codex plugin runtime packaging with source-sync drift guards.
