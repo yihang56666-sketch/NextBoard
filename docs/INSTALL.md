@@ -6,7 +6,7 @@ docs, tests, Codex plugin runtime, and embedded backend mirror together.
 ## Recommended: Source Workspace
 
 ```powershell
-git clone https://github.com/LeoKemp223/NextBoard.git
+git clone https://github.com/yihang56666-sketch/NextBoard.git
 cd NextBoard
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

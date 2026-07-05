@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hardware-butler"
 version = "0.1.0"
-description = "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions."
+description = "A safety-first embedded hardware copilot that turns board evidence, CubeMX projects, firmware plans, and bench bring-up into clear, gated next steps."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -81,9 +81,9 @@ hardware-butler = "tools.hardware_butler:main"
 butler = "tools.butler_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/LeoKemp223/NextBoard"
-Repository = "https://github.com/LeoKemp223/NextBoard"
-Issues = "https://github.com/LeoKemp223/NextBoard/issues"
+Homepage = "https://github.com/yihang56666-sketch/NextBoard"
+Repository = "https://github.com/yihang56666-sketch/NextBoard"
+Issues = "https://github.com/yihang56666-sketch/NextBoard/issues"
 
 [tool.setuptools.packages.find]
 include = ["tools*", "nextboard*"]

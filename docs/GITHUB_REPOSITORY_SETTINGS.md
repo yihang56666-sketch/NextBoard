@@ -7,13 +7,13 @@ Suggested settings for the public repository page.
 Description:
 
 ```text
-Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions.
+A safety-first embedded hardware copilot that turns board evidence, CubeMX projects, firmware plans, and bench bring-up into clear, gated next steps.
 ```
 
 Homepage:
 
 ```text
-https://github.com/LeoKemp223/NextBoard#readme
+https://github.com/yihang56666-sketch/NextBoard#readme
 ```
 
 Topics:
@@ -25,11 +25,11 @@ embedded, hardware, stm32, cubemx, firmware, freertos, jlink, openocd, probe-rs,
 Optional GitHub CLI commands:
 
 ```powershell
-gh repo edit LeoKemp223/NextBoard `
-  --description "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions." `
-  --homepage "https://github.com/LeoKemp223/NextBoard#readme"
+gh repo edit yihang56666-sketch/NextBoard `
+  --description "A safety-first embedded hardware copilot that turns board evidence, CubeMX projects, firmware plans, and bench bring-up into clear, gated next steps." `
+  --homepage "https://github.com/yihang56666-sketch/NextBoard#readme"
 
-gh repo edit LeoKemp223/NextBoard `
+gh repo edit yihang56666-sketch/NextBoard `
   --add-topic embedded `
   --add-topic hardware `
   --add-topic stm32 `

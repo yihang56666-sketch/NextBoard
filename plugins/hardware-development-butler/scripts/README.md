@@ -1,10 +1,10 @@
 # Hardware Butler
 
-[![CI](https://github.com/LeoKemp223/NextBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/LeoKemp223/NextBoard/actions/workflows/ci.yml)
+[![CI](https://github.com/yihang56666-sketch/NextBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/yihang56666-sketch/NextBoard/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions.
+A safety-first embedded hardware copilot that turns board evidence, CubeMX projects, firmware plans, and bench bring-up into clear, gated next steps.
 
 这是一个面向嵌入式硬件开发的工作区容器，不是单一固件工程。它把项目扫描、CubeMX/构建识别、芯片资料整理、固件补丁规划、台架预检和安全门控放在同一个工作流里。
 
@@ -19,7 +19,7 @@ Safe-first embedded hardware development workspace for project scanning, CubeMX/
 推荐以源码工作区方式使用：
 
 ```powershell
-git clone https://github.com/LeoKemp223/NextBoard.git
+git clone https://github.com/yihang56666-sketch/NextBoard.git
 cd NextBoard
 python -m pip install -e .
 ```

@@ -15,13 +15,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OWNER = "LeoKemp223"
+DEFAULT_OWNER = "yihang56666-sketch"
 DEFAULT_REPO = "NextBoard"
 DEFAULT_BRANCH = "main"
 DEFAULT_WORKFLOW = "ci.yml"
 EXPECTED_DESCRIPTION = (
-    "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, "
-    "evidence indexing, firmware planning, bench runbooks, and gated hardware actions."
+    "A safety-first embedded hardware copilot that turns board evidence, CubeMX projects, "
+    "firmware plans, and bench bring-up into clear, gated next steps."
 )
 EXPECTED_TOPICS = frozenset(
     {
