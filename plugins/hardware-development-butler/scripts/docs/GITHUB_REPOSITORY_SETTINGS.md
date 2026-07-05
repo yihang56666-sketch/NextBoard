@@ -22,6 +22,29 @@ Topics:
 embedded, hardware, stm32, cubemx, firmware, freertos, jlink, openocd, probe-rs, serial, can, safety, codex-plugin
 ```
 
+Optional GitHub CLI commands:
+
+```powershell
+gh repo edit LeoKemp223/NextBoard `
+  --description "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, evidence indexing, firmware planning, bench runbooks, and gated hardware actions." `
+  --homepage "https://github.com/LeoKemp223/NextBoard#readme"
+
+gh repo edit LeoKemp223/NextBoard `
+  --add-topic embedded `
+  --add-topic hardware `
+  --add-topic stm32 `
+  --add-topic cubemx `
+  --add-topic firmware `
+  --add-topic freertos `
+  --add-topic jlink `
+  --add-topic openocd `
+  --add-topic probe-rs `
+  --add-topic serial `
+  --add-topic can `
+  --add-topic safety `
+  --add-topic codex-plugin
+```
+
 ## Features
 
 Recommended:

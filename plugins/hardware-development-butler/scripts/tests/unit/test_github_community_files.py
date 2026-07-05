@@ -66,9 +66,13 @@ def test_launch_repository_settings_match_audit_constants() -> None:
     assert EXPECTED_DESCRIPTION in readme_text
     assert f'description = "{EXPECTED_DESCRIPTION}"' in pyproject_text
     assert EXPECTED_HOMEPAGE in settings_text
+    assert f'--description "{EXPECTED_DESCRIPTION}"' in settings_text
+    assert f'--homepage "{EXPECTED_HOMEPAGE}"' in settings_text
 
     match = re.search(r"Topics:\n\n```text\n(?P<topics>[^`]+)\n```", settings_text)
     assert match is not None
     documented_topics = {topic.strip() for topic in match.group("topics").split(",")}
 
     assert documented_topics == EXPECTED_TOPICS
+    for topic in EXPECTED_TOPICS:
+        assert f"--add-topic {topic}" in settings_text
