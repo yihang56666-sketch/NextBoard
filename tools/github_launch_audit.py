@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -81,6 +82,19 @@ def _run_git(args: tuple[str, ...]) -> str:
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or f"git {' '.join(args)} failed with exit code {result.returncode}")
     return result.stdout.strip()
+
+
+def _run_git_push_dry_run(remote: str, branch: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ("git", "push", "--dry-run", remote, branch),
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
 
 
 def local_head() -> str:
@@ -167,6 +181,64 @@ def check_heads(local_sha: str, remote_sha: str, *, remote: str, branch: str) ->
         message=f"{remote}/{branch} does not match local HEAD; push is still required.",
         next_action=f"Push local commits with `git push {remote} {branch}`, then wait for CI on {branch}.",
         details={"local": local_sha, "remote": remote_sha},
+    )
+
+
+def check_push_permission(remote: str, branch: str) -> AuditCheck:
+    command = f"git push --dry-run {remote} {branch}"
+    try:
+        result = _run_git_push_dry_run(remote, branch)
+    except subprocess.TimeoutExpired as exc:
+        return AuditCheck(
+            name="git.push",
+            status="error",
+            message=f"{command} timed out before Git reported whether push is authorized.",
+            next_action="Check Git Credential Manager prompts or network access, then rerun this dry-run push check.",
+            details={"command": command, "timeout_seconds": exc.timeout},
+        )
+
+    stdout = result.stdout.strip()
+    stderr = result.stderr.strip()
+    details: dict[str, Any] = {
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+    output = f"{stdout}\n{stderr}".strip()
+    if result.returncode == 0:
+        return AuditCheck(
+            name="git.push",
+            status="ok",
+            message=f"{command} completed successfully; Git credentials can push to {remote}/{branch}.",
+            next_action="No action required.",
+            details=details,
+        )
+
+    permission_match = re.search(r"Permission to (?P<repository>\S+) denied to (?P<account>[^.\s]+)", output)
+    if permission_match:
+        details["repository"] = permission_match.group("repository")
+        details["account"] = permission_match.group("account")
+        return AuditCheck(
+            name="git.push",
+            status="error",
+            message=(
+                f"{command} was rejected because GitHub account {details['account']} "
+                f"does not have push access to {details['repository']}."
+            ),
+            next_action=(
+                f"Grant {details['account']} write access, switch Git credentials to an account with access, "
+                "or change `origin` to a repository owned by the authenticated account; then rerun this check."
+            ),
+            details=details,
+        )
+
+    return AuditCheck(
+        name="git.push",
+        status="error",
+        message=f"{command} failed; Git could not prove push access to {remote}/{branch}.",
+        next_action="Fix the Git remote or credentials, then rerun this dry-run push check.",
+        details=details,
     )
 
 
@@ -296,12 +368,15 @@ def build_report(
     repository: dict[str, Any],
     workflow_run: dict[str, Any] | None,
     remote: str,
+    push_check: AuditCheck | None = None,
 ) -> AuditReport:
     checks = [
         check_heads(local_sha, remote_sha, remote=remote, branch=branch),
         *check_repository_metadata(repository),
         check_workflow_run(workflow_run, workflow=workflow, branch=branch, expected_sha=local_sha),
     ]
+    if push_check is not None:
+        checks.insert(1, push_check)
     status: Status = "ok" if all(check.status == "ok" for check in checks) else "error"
     return AuditReport(
         schema_version=1,
@@ -348,6 +423,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--branch", default=DEFAULT_BRANCH, help="Branch expected to contain local HEAD")
     parser.add_argument("--workflow", default=DEFAULT_WORKFLOW, help="Workflow file name to verify on the branch")
     parser.add_argument("--print-settings", action="store_true", help="print expected GitHub About settings and exit")
+    parser.add_argument(
+        "--check-push",
+        action="store_true",
+        help="include a `git push --dry-run` credential/permission preflight in the audit",
+    )
+    parser.add_argument(
+        "--check-push-only",
+        action="store_true",
+        help="only run the `git push --dry-run` credential/permission preflight",
+    )
     parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
     return parser.parse_args(argv)
 
@@ -441,9 +526,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_settings:
         print_settings(repository=f"{args.owner}/{args.repo}", as_json=args.json)
         return 0
+    if args.check_push_only:
+        push_only_check = check_push_permission(args.remote, args.branch)
+        report = AuditReport(
+            schema_version=1,
+            status=push_only_check.status,
+            repository=f"{args.owner}/{args.repo}",
+            branch=args.branch,
+            checks=[push_only_check],
+        )
+        print_report(report, as_json=args.json)
+        return 0 if report.status == "ok" else 1
 
     token = os.environ.get("GITHUB_TOKEN") or None
     try:
+        push_check: AuditCheck | None = check_push_permission(args.remote, args.branch) if args.check_push else None
         report = build_report(
             owner=args.owner,
             repo=args.repo,
@@ -454,6 +551,7 @@ def main(argv: list[str] | None = None) -> int:
             repository=fetch_repository(args.owner, args.repo, token=token),
             workflow_run=fetch_latest_workflow_run(args.owner, args.repo, args.workflow, args.branch, token=token),
             remote=args.remote,
+            push_check=push_check,
         )
     except RuntimeError as exc:
         report = build_runtime_error_report(owner=args.owner, repo=args.repo, branch=args.branch, error=str(exc))

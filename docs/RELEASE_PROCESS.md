@@ -71,6 +71,19 @@ tracked source directory.
 
 ## 4. Push And Verify
 
+Before the real push, you can verify that the currently cached GitHub account
+has write access to the configured remote without changing GitHub:
+
+```powershell
+python tools\github_launch_audit.py --check-push-only
+```
+
+If this reports `Permission to <owner>/<repo>.git denied to <account>`, the
+computer can still upload to GitHub, but the active Git credential is not allowed
+to push to this repository. Grant that account write access, switch Git
+Credential Manager to an account that owns the repository, or change `origin` to
+the repository you intend to publish.
+
 ```powershell
 git push origin main
 ```
@@ -85,6 +98,12 @@ completed successfully for the local launch candidate commit.
 
 ```powershell
 python tools\github_launch_audit.py --json
+```
+
+To include the same push-permission preflight in the full launch audit:
+
+```powershell
+python tools\github_launch_audit.py --check-push --json
 ```
 
 For an operator-friendly checklist, run the same command without `--json`; any
