@@ -10,6 +10,10 @@ One-command local verification:
 python tools\release_verify.py
 ```
 
+The verifier prints one compact `PASS` line per step by default. Add
+`--verbose` when you need the full child command output while debugging a
+failing gate.
+
 For quick iteration on the onboarding/demo/plugin path:
 
 ```powershell

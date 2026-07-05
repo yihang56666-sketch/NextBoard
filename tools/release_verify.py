@@ -151,17 +151,41 @@ def configure_stdio() -> None:
             reconfigure(encoding="utf-8", errors="replace")
 
 
-def run_steps(steps: list[Step], *, dry_run: bool = False) -> int:
+def _print_captured_output(result: subprocess.CompletedProcess[str]) -> None:
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+
+
+def run_steps(steps: list[Step], *, dry_run: bool = False, verbose: bool = False) -> int:
     env = build_env()
     for index, step in enumerate(steps, start=1):
         print(f"[{index}/{len(steps)}] {step.name}: {step.purpose}")
         print(f"  {format_command(step.command)}")
         if dry_run:
             continue
-        result = subprocess.run(step.command, cwd=REPO_ROOT, check=False, env=env)
-        if result.returncode != 0:
-            print(f"FAILED {step.name} with exit code {result.returncode}", file=sys.stderr)
-            return result.returncode
+        if verbose:
+            verbose_result = subprocess.run(step.command, cwd=REPO_ROOT, check=False, env=env)
+            returncode = verbose_result.returncode
+        else:
+            captured_result = subprocess.run(
+                step.command,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            returncode = captured_result.returncode
+        if returncode != 0:
+            if not verbose:
+                _print_captured_output(captured_result)
+            print(f"FAILED {step.name} with exit code {returncode}", file=sys.stderr)
+            return returncode
+        print(f"  PASS {step.name}")
     return 0
 
 
@@ -175,6 +199,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--list", action="store_true", help="print selected checks without running them")
     parser.add_argument("--dry-run", action="store_true", help="print selected checks in execution order")
+    parser.add_argument("--verbose", action="store_true", help="stream child command output instead of printing a summary")
     return parser.parse_args(argv)
 
 
@@ -186,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         for step in steps:
             print(f"{step.name}: {format_command(step.command)}")
         return 0
-    return run_steps(steps, dry_run=args.dry_run)
+    return run_steps(steps, dry_run=args.dry_run, verbose=args.verbose)
 
 
 if __name__ == "__main__":

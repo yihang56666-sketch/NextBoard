@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from tools import release_verify
 
 
@@ -44,3 +46,72 @@ def test_build_env_defaults_python_children_to_utf8(monkeypatch) -> None:
 
     assert env["PYTHONUTF8"] == "1"
     assert env["PYTHONIOENCODING"] == "utf-8"
+
+
+def test_run_steps_captures_child_output_by_default(monkeypatch, capsys) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(command: tuple[str, ...], **kwargs: object) -> SimpleNamespace:
+        calls.append({"command": command, **kwargs})
+        return SimpleNamespace(returncode=0, stdout="child stdout\n", stderr="child stderr\n")
+
+    monkeypatch.setattr(release_verify.subprocess, "run", fake_run)
+    step = release_verify.Step(
+        name="fake-step",
+        command=("fake", "command"),
+        profiles=frozenset({"quick"}),
+        purpose="prove compact output",
+    )
+
+    exit_code = release_verify.run_steps([step])
+
+    output = capsys.readouterr()
+    assert exit_code == 0
+    assert calls[0]["capture_output"] is True
+    assert calls[0]["text"] is True
+    assert "PASS fake-step" in output.out
+    assert "child stdout" not in output.out
+    assert "child stderr" not in output.err
+
+
+def test_run_steps_verbose_streams_child_output(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(command: tuple[str, ...], **kwargs: object) -> SimpleNamespace:
+        calls.append({"command": command, **kwargs})
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(release_verify.subprocess, "run", fake_run)
+    step = release_verify.Step(
+        name="fake-step",
+        command=("fake", "command"),
+        profiles=frozenset({"quick"}),
+        purpose="prove verbose output",
+    )
+
+    exit_code = release_verify.run_steps([step], verbose=True)
+
+    assert exit_code == 0
+    assert "capture_output" not in calls[0]
+    assert "text" not in calls[0]
+
+
+def test_run_steps_prints_captured_output_on_failure(monkeypatch, capsys) -> None:
+    def fake_run(command: tuple[str, ...], **kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(returncode=9, stdout="child stdout\n", stderr="child stderr\n")
+
+    monkeypatch.setattr(release_verify.subprocess, "run", fake_run)
+    step = release_verify.Step(
+        name="fake-step",
+        command=("fake", "command"),
+        profiles=frozenset({"quick"}),
+        purpose="prove failure output",
+    )
+
+    exit_code = release_verify.run_steps([step])
+
+    output = capsys.readouterr()
+    assert exit_code == 9
+    assert "child stdout" in output.out
+    assert "child stderr" in output.err
+    assert "FAILED fake-step with exit code 9" in output.err
