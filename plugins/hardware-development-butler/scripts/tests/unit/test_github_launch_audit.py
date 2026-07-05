@@ -51,6 +51,28 @@ def test_build_report_is_ok_when_remote_metadata_and_ci_match() -> None:
     assert all(check.next_action == "No action required." for check in report.checks)
 
 
+def test_build_report_uses_owner_repo_homepage() -> None:
+    homepage = github_launch_audit.expected_homepage("yihang56666-sketch", "hardware-agent")
+
+    report = github_launch_audit.build_report(
+        owner="yihang56666-sketch",
+        repo="hardware-agent",
+        branch="main",
+        workflow="ci.yml",
+        local_sha="abc",
+        remote_sha="abc",
+        repository=_repo_payload(homepage=homepage),
+        workflow_run=_workflow_run(),
+        remote="origin",
+    )
+
+    checks = {check.name: check for check in report.checks}
+
+    assert report.repository == "yihang56666-sketch/hardware-agent"
+    assert checks["repo.homepage"].status == "ok"
+    assert checks["repo.homepage"].details["expected"] == homepage
+
+
 def test_build_report_reports_push_metadata_and_ci_gaps() -> None:
     report = github_launch_audit.build_report(
         owner="LeoKemp223",
@@ -266,6 +288,29 @@ def test_print_settings_json(monkeypatch, capsys) -> None:
     assert payload["homepage"] == github_launch_audit.EXPECTED_HOMEPAGE
     assert payload["topics"] == sorted(github_launch_audit.EXPECTED_TOPICS)
     assert any("--description" in command for command in payload["commands"])
+
+
+def test_print_settings_json_uses_custom_owner_repo_homepage(monkeypatch, capsys) -> None:
+    def fail_if_called(*args: object, **kwargs: object) -> object:
+        raise AssertionError("offline settings output should not inspect git or GitHub")
+
+    monkeypatch.setattr(github_launch_audit, "local_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "remote_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_repository", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_latest_workflow_run", fail_if_called)
+
+    exit_code = github_launch_audit.main(
+        ["--owner", "yihang56666-sketch", "--repo", "hardware-agent", "--print-settings", "--json"]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["repository"] == "yihang56666-sketch/hardware-agent"
+    assert payload["homepage"] == "https://github.com/yihang56666-sketch/hardware-agent#readme"
+    assert any(
+        '--homepage "https://github.com/yihang56666-sketch/hardware-agent#readme"' in command
+        for command in payload["commands"]
+    )
 
 
 def test_check_push_only_does_not_contact_github(monkeypatch, capsys) -> None:

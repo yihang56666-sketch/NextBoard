@@ -23,7 +23,6 @@ EXPECTED_DESCRIPTION = (
     "Safe-first embedded hardware development workspace for project scanning, CubeMX/build discovery, "
     "evidence indexing, firmware planning, bench runbooks, and gated hardware actions."
 )
-EXPECTED_HOMEPAGE = "https://github.com/LeoKemp223/NextBoard#readme"
 EXPECTED_TOPICS = frozenset(
     {
         "embedded",
@@ -41,6 +40,18 @@ EXPECTED_TOPICS = frozenset(
         "codex-plugin",
     }
 )
+DEFAULT_REPOSITORY = f"{DEFAULT_OWNER}/{DEFAULT_REPO}"
+
+
+def expected_homepage(owner: str, repo: str) -> str:
+    return f"https://github.com/{owner}/{repo}#readme"
+
+
+def expected_homepage_for_repository(repository: str) -> str:
+    return f"https://github.com/{repository}#readme"
+
+
+EXPECTED_HOMEPAGE = expected_homepage(DEFAULT_OWNER, DEFAULT_REPO)
 
 Status = Literal["ok", "error"]
 
@@ -242,7 +253,11 @@ def check_push_permission(remote: str, branch: str) -> AuditCheck:
     )
 
 
-def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
+def check_repository_metadata(
+    repository: dict[str, Any],
+    *,
+    homepage_expected: str = EXPECTED_HOMEPAGE,
+) -> list[AuditCheck]:
     checks: list[AuditCheck] = []
     description = str(repository.get("description") or "")
     checks.append(
@@ -263,14 +278,14 @@ def check_repository_metadata(repository: dict[str, Any]) -> list[AuditCheck]:
     checks.append(
         AuditCheck(
             name="repo.homepage",
-            status="ok" if homepage == EXPECTED_HOMEPAGE else "error",
+            status="ok" if homepage == homepage_expected else "error",
             message="Repository homepage matches launch settings."
-            if homepage == EXPECTED_HOMEPAGE
+            if homepage == homepage_expected
             else "Repository homepage does not match launch settings.",
             next_action="No action required."
-            if homepage == EXPECTED_HOMEPAGE
+            if homepage == homepage_expected
             else "Set the GitHub About homepage to the expected value in docs/GITHUB_REPOSITORY_SETTINGS.md.",
-            details={"actual": homepage, "expected": EXPECTED_HOMEPAGE},
+            details={"actual": homepage, "expected": homepage_expected},
         )
     )
 
@@ -370,9 +385,10 @@ def build_report(
     remote: str,
     push_check: AuditCheck | None = None,
 ) -> AuditReport:
+    repository_name = f"{owner}/{repo}"
     checks = [
         check_heads(local_sha, remote_sha, remote=remote, branch=branch),
-        *check_repository_metadata(repository),
+        *check_repository_metadata(repository, homepage_expected=expected_homepage(owner, repo)),
         check_workflow_run(workflow_run, workflow=workflow, branch=branch, expected_sha=local_sha),
     ]
     if push_check is not None:
@@ -381,7 +397,7 @@ def build_report(
     return AuditReport(
         schema_version=1,
         status=status,
-        repository=f"{owner}/{repo}",
+        repository=repository_name,
         branch=branch,
         checks=checks,
     )
@@ -438,11 +454,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def build_metadata_command(repository: str) -> str:
+    homepage = expected_homepage_for_repository(repository)
     return "\n".join(
         (
             f"gh repo edit {repository} `",
             f'  --description "{EXPECTED_DESCRIPTION}" `',
-            f'  --homepage "{EXPECTED_HOMEPAGE}"',
+            f'  --homepage "{homepage}"',
         )
     )
 
@@ -480,7 +497,7 @@ def build_settings_payload(repository: str) -> dict[str, Any]:
     return {
         "repository": repository,
         "description": EXPECTED_DESCRIPTION,
-        "homepage": EXPECTED_HOMEPAGE,
+        "homepage": expected_homepage_for_repository(repository),
         "topics": sorted(EXPECTED_TOPICS),
         "commands": build_settings_commands(repository),
     }
@@ -494,7 +511,7 @@ def print_settings(*, repository: str, as_json: bool) -> None:
 
     print(f"GitHub launch settings: {repository}")
     print(f"Description: {EXPECTED_DESCRIPTION}")
-    print(f"Homepage: {EXPECTED_HOMEPAGE}")
+    print(f"Homepage: {payload['homepage']}")
     print(f"Topics: {', '.join(sorted(EXPECTED_TOPICS))}")
     print()
     print("Suggested GitHub CLI commands:")

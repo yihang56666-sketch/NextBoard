@@ -121,6 +121,15 @@ python tools\github_launch_audit.py --print-settings
 python tools\github_launch_audit.py --print-settings --json
 ```
 
+If you publish under a different GitHub owner or repository name, pass that
+target explicitly so the generated homepage and audit expectations match the
+actual public URL:
+
+```powershell
+python tools\github_launch_audit.py --owner yihang56666-sketch --repo hardware-agent --print-settings
+python tools\github_launch_audit.py --owner yihang56666-sketch --repo hardware-agent --json
+```
+
 ## 5. Tag
 
 Tag only after CI is green:
