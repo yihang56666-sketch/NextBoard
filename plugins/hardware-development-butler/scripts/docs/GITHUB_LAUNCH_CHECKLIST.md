@@ -38,6 +38,7 @@
 - [x] Dependabot configuration exists for pip and GitHub Actions.
 - [x] Issue forms are available.
 - [x] Pull request template includes verification and safety checks.
+- [x] Generated release notes are grouped by `.github/release.yml`.
 - [ ] `python tools\github_launch_audit.py --json` reports `"status": "ok"` against GitHub.
 - [ ] CI passes on `main`.
 - [ ] Repository description, topics, and homepage are set in GitHub settings.

@@ -1,0 +1,29 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: Safety And Hardware Gates
+      labels:
+        - safety
+        - hardware
+    - title: User Workflows
+      labels:
+        - enhancement
+        - workflow
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Fixes
+      labels:
+        - bug
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Maintenance
+      labels:
+        - chore
+        - github-actions
+    - title: Other Changes
+      labels:
+        - "*"

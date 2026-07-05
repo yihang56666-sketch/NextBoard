@@ -103,4 +103,6 @@ git push origin v0.1.0
 ```
 
 Create the GitHub release from `CHANGELOG.md` and call out that real hardware
-execution is still confirmation-gated or planned-gated.
+execution is still confirmation-gated or planned-gated. GitHub generated release
+notes are grouped by `.github/release.yml`; use them as a PR-level cross-check,
+then keep the final release body aligned with `CHANGELOG.md`.
