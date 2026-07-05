@@ -146,6 +146,46 @@ def test_human_report_prints_next_actions_for_errors(capsys) -> None:
     assert "--add-topic stm32" in output
 
 
+def test_print_settings_does_not_contact_git_or_github(monkeypatch, capsys) -> None:
+    def fail_if_called(*args: object, **kwargs: object) -> object:
+        raise AssertionError("offline settings output should not inspect git or GitHub")
+
+    monkeypatch.setattr(github_launch_audit, "local_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "remote_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_repository", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_latest_workflow_run", fail_if_called)
+
+    exit_code = github_launch_audit.main(["--print-settings"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "GitHub launch settings: LeoKemp223/NextBoard" in output
+    assert github_launch_audit.EXPECTED_DESCRIPTION in output
+    assert github_launch_audit.EXPECTED_HOMEPAGE in output
+    assert "Suggested GitHub CLI commands:" in output
+    assert "--add-topic stm32" in output
+
+
+def test_print_settings_json(monkeypatch, capsys) -> None:
+    def fail_if_called(*args: object, **kwargs: object) -> object:
+        raise AssertionError("offline settings output should not inspect git or GitHub")
+
+    monkeypatch.setattr(github_launch_audit, "local_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "remote_head", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_repository", fail_if_called)
+    monkeypatch.setattr(github_launch_audit, "fetch_latest_workflow_run", fail_if_called)
+
+    exit_code = github_launch_audit.main(["--print-settings", "--json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["repository"] == "LeoKemp223/NextBoard"
+    assert payload["description"] == github_launch_audit.EXPECTED_DESCRIPTION
+    assert payload["homepage"] == github_launch_audit.EXPECTED_HOMEPAGE
+    assert payload["topics"] == sorted(github_launch_audit.EXPECTED_TOPICS)
+    assert any("--description" in command for command in payload["commands"])
+
+
 def test_runtime_errors_are_structured_json(monkeypatch, capsys) -> None:
     def raise_network_error() -> str:
         raise RuntimeError("fatal: unable to access remote")

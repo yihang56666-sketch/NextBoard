@@ -93,6 +93,15 @@ If the audit cannot reach GitHub or the configured remote, `--json` still emits
 a structured `audit.runtime` failure so scripts can surface the infrastructure
 problem without parsing stderr.
 
+When you only need the expected GitHub About settings and copy-pasteable
+commands, or GitHub is temporarily unreachable, print them without contacting
+GitHub:
+
+```powershell
+python tools\github_launch_audit.py --print-settings
+python tools\github_launch_audit.py --print-settings --json
+```
+
 ## 5. Tag
 
 Tag only after CI is green:

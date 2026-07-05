@@ -347,8 +347,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--remote", default="origin", help="Git remote name to compare against local HEAD")
     parser.add_argument("--branch", default=DEFAULT_BRANCH, help="Branch expected to contain local HEAD")
     parser.add_argument("--workflow", default=DEFAULT_WORKFLOW, help="Workflow file name to verify on the branch")
+    parser.add_argument("--print-settings", action="store_true", help="print expected GitHub About settings and exit")
     parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
     return parser.parse_args(argv)
+
+
+def build_metadata_command(repository: str) -> str:
+    return "\n".join(
+        (
+            f"gh repo edit {repository} `",
+            f'  --description "{EXPECTED_DESCRIPTION}" `',
+            f'  --homepage "{EXPECTED_HOMEPAGE}"',
+        )
+    )
+
+
+def build_topics_command(repository: str, topics: list[str]) -> str:
+    lines = [f"gh repo edit {repository} `"]
+    for index, topic in enumerate(topics):
+        suffix = " `" if index < len(topics) - 1 else ""
+        lines.append(f"  --add-topic {topic}{suffix}")
+    return "\n".join(lines)
+
+
+def build_settings_commands(repository: str) -> list[str]:
+    return [build_metadata_command(repository), build_topics_command(repository, sorted(EXPECTED_TOPICS))]
 
 
 def build_github_cli_commands(report: AuditReport) -> list[str]:
@@ -356,28 +379,42 @@ def build_github_cli_commands(report: AuditReport) -> list[str]:
     commands: list[str] = []
 
     if "repo.description" in failed_checks or "repo.homepage" in failed_checks:
-        commands.append(
-            "\n".join(
-                (
-                    f"gh repo edit {report.repository} `",
-                    f'  --description "{EXPECTED_DESCRIPTION}" `',
-                    f'  --homepage "{EXPECTED_HOMEPAGE}"',
-                )
-            )
-        )
+        commands.append(build_metadata_command(report.repository))
 
     topics_check = failed_checks.get("repo.topics")
     if topics_check is not None:
         raw_missing = topics_check.details.get("missing", sorted(EXPECTED_TOPICS))
         missing_topics = sorted(str(topic) for topic in raw_missing) if isinstance(raw_missing, list) else sorted(EXPECTED_TOPICS)
         if missing_topics:
-            lines = [f"gh repo edit {report.repository} `"]
-            for index, topic in enumerate(missing_topics):
-                suffix = " `" if index < len(missing_topics) - 1 else ""
-                lines.append(f"  --add-topic {topic}{suffix}")
-            commands.append("\n".join(lines))
+            commands.append(build_topics_command(report.repository, missing_topics))
 
     return commands
+
+
+def build_settings_payload(repository: str) -> dict[str, Any]:
+    return {
+        "repository": repository,
+        "description": EXPECTED_DESCRIPTION,
+        "homepage": EXPECTED_HOMEPAGE,
+        "topics": sorted(EXPECTED_TOPICS),
+        "commands": build_settings_commands(repository),
+    }
+
+
+def print_settings(*, repository: str, as_json: bool) -> None:
+    payload = build_settings_payload(repository)
+    if as_json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    print(f"GitHub launch settings: {repository}")
+    print(f"Description: {EXPECTED_DESCRIPTION}")
+    print(f"Homepage: {EXPECTED_HOMEPAGE}")
+    print(f"Topics: {', '.join(sorted(EXPECTED_TOPICS))}")
+    print()
+    print("Suggested GitHub CLI commands:")
+    for command in payload["commands"]:
+        print(command)
 
 
 def print_report(report: AuditReport, *, as_json: bool) -> None:
@@ -401,6 +438,10 @@ def print_report(report: AuditReport, *, as_json: bool) -> None:
 def main(argv: list[str] | None = None) -> int:
     configure_stdio()
     args = parse_args(argv)
+    if args.print_settings:
+        print_settings(repository=f"{args.owner}/{args.repo}", as_json=args.json)
+        return 0
+
     token = os.environ.get("GITHUB_TOKEN") or None
     try:
         report = build_report(
