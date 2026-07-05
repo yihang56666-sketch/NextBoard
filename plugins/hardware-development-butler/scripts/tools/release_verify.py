@@ -71,6 +71,7 @@ STEPS: tuple[Step, ...] = (
             "pytest",
             "tests/unit/test_plugin_sync.py",
             "tests/unit/test_hardware_butler_guide.py",
+            "tests/unit/test_github_launch_audit.py",
             "tests/unit/test_github_community_files.py",
             "tests/unit/test_public_docs_readability.py",
             "-q",
@@ -78,7 +79,7 @@ STEPS: tuple[Step, ...] = (
             "--basetemp=.tmp-pytest-current",
         ),
         profiles=frozenset({"quick"}),
-        purpose="check the launch docs/demo path, GitHub community files, and plugin mirror quickly",
+        purpose="check the launch docs/demo path, GitHub audit, community files, and plugin mirror quickly",
     ),
     Step(
         name="lint",
